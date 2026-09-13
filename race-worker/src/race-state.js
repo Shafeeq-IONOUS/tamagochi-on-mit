@@ -3,11 +3,10 @@ import { LANE_COLS } from "./render.js";
 import { SCHOOLS, SCHOOL_INFO, isSchool } from "./mascots.js";
 import { centeredMascotFrame } from "./mascot-preview.js";
 import { packFrame, FINISH_COLUMNS } from "./render.js";
-import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, introducingAt, isAnimating, validateSceneConfig } from "./scenes.js";
+import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, introducingAt, validateSceneConfig } from "./scenes.js";
 import { FlashGuard } from "./safety.js";
 import { GOLD, MASCOTS } from "./sprites.js";
 import { LIVING_FIELD_SCENES } from "./living-field-scenes.js";
-import { WIN_CELEBRATION_MS } from "./win-celebration.js";
 
 const CHEERS_PER_COLUMN = 12; // crowd-tunable: lower = faster race
 const ALARM_INTERVAL_MS = 400; // how often a running race repaints the building
@@ -40,7 +39,6 @@ const DEFAULT_STATE = () => ({
   startedAt: null,
   finishedAt: null,
   winner: null,
-  celebrationEndsAt: null, // ms epoch; set on win, cleared by start()/reset() via DEFAULT_STATE()
   phaseStartedAt: Date.now(),
   phaseEndsAt: null,
   champion: null, // school wearing the crown; null = the Duck King
@@ -61,7 +59,7 @@ export class RaceState extends DurableObject {
       this.state_ = { ...DEFAULT_STATE(), ...stored };
       if (!this.state_.instance && env.SIM_INSTANCE) this.state_.instance = env.SIM_INSTANCE;
       // keep the reign / intro / win celebration animating after a restart or deploy
-      if (isAnimating(this.state_, Date.now()) && !(await ctx.storage.getAlarm())) {
+      if (ANIMATED_STATUSES.includes(this.state_.status) && !(await ctx.storage.getAlarm())) {
         await ctx.storage.setAlarm(Date.now());
       }
     });
@@ -157,9 +155,8 @@ export class RaceState extends DurableObject {
       this.state_.winner = winner;
       this.state_.champion = winner; // reigns until the next race's intro
       this.state_.finishedAt = now;
-      this.state_.celebrationEndsAt = now + WIN_CELEBRATION_MS;
-      await this.pushFrame(now); // the celebration's first frame, immediately (== today's static frame)
-      await this.ctx.storage.setAlarm(now); // alarm() streams the rest, then settles on its own
+      await this.pushFrame(now); // the celebration's first frame, immediately
+      await this.ctx.storage.setAlarm(now); // alarm() streams it, looping forever until the next start()
     }
   }
 
@@ -300,12 +297,10 @@ export class RaceState extends DurableObject {
   async alarm() {
     if (!this.state_.instance) return;
     const batchStart = Date.now();
-    let wasAnimating = false;
-    while (this.previewGeneration === 0 && isAnimating(this.state_, Date.now()) && Date.now() - batchStart < BATCH_MS) {
-      wasAnimating = true;
+    while (this.previewGeneration === 0 && ANIMATED_STATUSES.includes(this.state_.status) && Date.now() - batchStart < BATCH_MS) {
       const now = Date.now();
       await this.advance(now);
-      if (!isAnimating(this.state_, now)) break;
+      if (!ANIMATED_STATUSES.includes(this.state_.status)) break;
       await this.pushFrame(now);
       const fps = this.state_.status === "idle" ? REIGN_FPS : SCENE_FPS;
       await sleep(Math.max(0, 1000 / fps - (Date.now() - now)));
@@ -313,7 +308,7 @@ export class RaceState extends DurableObject {
 
     if (this.previewGeneration !== 0) {
       return; // a preview took over; it re-arms the alarm itself when it's done
-    } else if (isAnimating(this.state_, Date.now())) {
+    } else if (ANIMATED_STATUSES.includes(this.state_.status)) {
       await this.ctx.storage.setAlarm(Date.now());
     } else if (this.state_.status === "running") {
       await this.pushFrame();
@@ -321,8 +316,6 @@ export class RaceState extends DurableObject {
       if (this.state_.status === "running") {
         await this.ctx.storage.setAlarm(Date.now() + ALARM_INTERVAL_MS);
       }
-    } else if (wasAnimating && this.state_.status === "finished") {
-      await this.pushFrame(); // celebration just ended: settle cleanly onto the static frame
     }
   }
 }

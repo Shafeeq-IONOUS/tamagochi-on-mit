@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { COLS, LANE_COLS, OFF, ROWS, buildFrame, climbTop } from "../src/render.js";
 import { FlashGuard, GUARD_FLASHES_PER_SECOND, MAX_FLASHES_PER_SECOND, worstFlashRate } from "../src/safety.js";
 import {
+  ANIMATED_STATUSES,
   DEFAULT_SCENE_CONFIG,
   INTRO_BEATS,
   countdownFrame,
@@ -143,19 +144,17 @@ test("the guard stops a 10 Hz strobe", () => {
   assert.ok(worstFlashRate(safe, 30).rate <= GUARD_FLASHES_PER_SECOND);
 });
 
-test("frameFor plays the win celebration while it's live, then settles onto the static frame", () => {
+test("frameFor plays the win celebration for as long as \"finished\" persists, never settling", () => {
   const progressCols = Object.fromEntries(SCHOOLS.map((s) => [s, 8]));
   const base = { champion: null, config: DEFAULT_SCENE_CONFIG, phaseStartedAt: 0, winner: "mit", progressCols };
-  // mid-celebration: matches winCelebrationFrame directly
-  assert.deepEqual(
-    frameFor({ ...base, status: "finished", celebrationEndsAt: WIN_CELEBRATION_MS }, 5000),
-    winCelebrationFrame(5000, { winner: "mit", progressCols }),
-  );
-  // celebration over: falls back to the plain static finish frame
-  assert.deepEqual(
-    frameFor({ ...base, status: "finished", celebrationEndsAt: WIN_CELEBRATION_MS }, WIN_CELEBRATION_MS + 1),
-    buildFrame({ progressCols, status: "finished", winner: "mit" }),
-  );
+  // always matches winCelebrationFrame directly — mid-reveal, and long after (the looping phase)
+  for (const t of [5000, WIN_CELEBRATION_MS + 1, WIN_CELEBRATION_MS * 5]) {
+    assert.deepEqual(frameFor({ ...base, status: "finished" }, t), winCelebrationFrame(t, { winner: "mit", progressCols }));
+  }
+});
+
+test("\"finished\" is an animated status, same as idle/intro/countdown", () => {
+  assert.ok(ANIMATED_STATUSES.includes("finished"));
 });
 
 test("the whole show, including a full climb, is flash-safe", () => {

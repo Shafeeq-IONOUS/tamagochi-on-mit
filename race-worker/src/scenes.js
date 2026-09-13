@@ -26,7 +26,9 @@ import { winCelebrationFrame } from "./win-celebration.js";
 export const DEFAULT_SCENE_CONFIG = { introSeconds: 26.5, countdownSeconds: 3 };
 // Shorter than ~14 s and the beats (especially the four introductions) blur together.
 export const SCENE_CONFIG_LIMITS = { introSeconds: [14, 45], countdownSeconds: [0, 10] };
-export const ANIMATED_STATUSES = ["idle", "intro", "countdown"];
+// "finished" loops the win celebration forever (see win-celebration.js), the same as "idle"
+// loops the reign forever — both only stop when a host calls start()/reset().
+export const ANIMATED_STATUSES = ["idle", "intro", "countdown", "finished"];
 
 // Beat boundaries in ms for a 26.5 s intro; they stretch or shrink with the configured length.
 export const INTRO_BEATS = {
@@ -221,15 +223,6 @@ export function raceStartFrame() {
   return buildFrame({ progressCols: Object.fromEntries(SCHOOLS.map((s) => [s, 0])), status: "running", winner: null });
 }
 
-/** Whether the building should keep repainting on its own clock right now, vs. holding a
- * static frame: the idle reign forever, intro/countdown for their bounded phase, and
- * "finished" only for the bounded window right after a win. */
-export function isAnimating(state, now) {
-  if (ANIMATED_STATUSES.includes(state.status)) return true;
-  if (state.status === "finished") return Boolean(state.celebrationEndsAt) && now < state.celebrationEndsAt;
-  return false;
-}
-
 /** Whatever the building should show for `state` at `now` (ms since epoch). */
 export function frameFor(state, now) {
   const t = Math.max(0, now - (state.phaseStartedAt ?? now));
@@ -242,9 +235,7 @@ export function frameFor(state, now) {
     case "countdown":
       return countdownFrame(t, config);
     case "finished":
-      return state.celebrationEndsAt && now < state.celebrationEndsAt
-        ? winCelebrationFrame(t, { winner: state.winner, progressCols: state.progressCols })
-        : buildFrame(state);
+      return winCelebrationFrame(t, { winner: state.winner, progressCols: state.progressCols });
     default: // "running"
       return buildFrame(state);
   }
