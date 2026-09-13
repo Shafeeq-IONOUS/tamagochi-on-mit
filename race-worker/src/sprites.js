@@ -60,7 +60,8 @@ export const MASCOTS = {
     // 5x5: the broad hat brim (row 2, wider than the crown above it) is the single most
     // identifying shape here, plus the white collar over the crimson robe. G (hat side shading)
     // and Y (buckle) are dropped for lack of room; H/L/C/K keep the same colors as the 9x9.
-    sprite5: [".HHH.", "HHHHH", "LELML", "CCCCC", "KKKKK"],
+    // Face row: both eyes at the outer edges flanking a centred mouth (was missing an eye).
+    sprite5: [".HHH.", "HHHHH", "ELMLE", "CCCCC", "KKKKK"],
     mini: ["HH", "LL", "KK"],
     palette: { H: [90, 90, 140], G: [150, 150, 165], L: [230, 170, 130], C: [200, 200, 190], K: [190, 30, 55] },
     eye: [80, 40, 20],
@@ -76,6 +77,7 @@ export const MASCOTS = {
     sprite5: ["B...B", "BBBBB", "EBLBE", ".LML.", ".KKK."],
     mini: ["BB", "LL", "KK"],
     palette: { B: [80, 95, 200], L: [190, 190, 190], K: [204, 0, 0] },
+    eye: [25, 22, 20], // black, not the default light eye
   }),
   husky: mascot({
     name: "Paws the Husky",

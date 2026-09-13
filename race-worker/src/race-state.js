@@ -52,7 +52,7 @@ export class RaceState extends DurableObject {
     this.env = env;
     this.lastCheerAt = new Map();
     this.guard = new FlashGuard();
-    this.previewing = false; // true while a debug preview streams; alarm() yields to it
+    this.previewGeneration = 0; // >0 while a debug preview streams; alarm() yields to it
     this.state_ = null;
     ctx.blockConcurrencyWhile(async () => {
       const stored = await ctx.storage.get("state");
@@ -229,14 +229,38 @@ export class RaceState extends DurableObject {
     await this.pushRawFrame(frameFor(state, now), now);
   }
 
-  /** Stream `frameAt(t)` (t in ms from 0) for `seconds` at `fps`, each frame through the guard. */
+  /** Stream `frameAt(t)` (t in ms from 0) for `seconds` at `fps`, each frame through the guard.
+   * Owns the whole preview lifecycle: pauses the idle reign's own alarm loop so the two never
+   * interleave, and — the part that matters when a second preview starts before the first one
+   * finishes — claims a generation token so THIS run yields instantly if a newer preview takes
+   * over, instead of both streaming frames at once and fighting for the same facade.
+   *
+   * `deleteAlarm()` alone only cancels a FUTURE alarm — it doesn't stop an `alarm()`
+   * invocation that's already mid-batch (it sleeps between frames, and DO RPCs can run
+   * concurrently with that sleep), so a preview starting mid-batch used to race against the
+   * still-running reign loop. `this.previewGeneration` fixes both that AND two previews
+   * racing each other: alarm() only runs while it's 0 (no preview active), and each
+   * streamPreview() call takes the next generation number and checks every iteration that
+   * it's still the current one — a newer call bumps the counter, so the older loop notices
+   * and stops on its very next frame instead of continuing to push. Only whichever call is
+   * still current when its own loop ends gets to reset the counter and re-arm the reign. */
   async streamPreview(frameAt, seconds, fps = PREVIEW_FPS) {
-    const total = Math.max(1, Math.round(seconds * fps));
-    for (let i = 0; i < total; i++) {
-      const stepStart = Date.now();
-      await this.pushRawFrame(frameAt((i * 1000) / fps), stepStart);
-      const elapsed = Date.now() - stepStart;
-      await sleep(Math.max(0, 1000 / fps - elapsed));
+    const myGeneration = ++this.previewGeneration;
+    await this.ctx.storage.deleteAlarm();
+    try {
+      const total = Math.max(1, Math.round(seconds * fps));
+      for (let i = 0; i < total; i++) {
+        if (this.previewGeneration !== myGeneration) return; // superseded — let the new one finish
+        const stepStart = Date.now();
+        await this.pushRawFrame(frameAt((i * 1000) / fps), stepStart);
+        const elapsed = Date.now() - stepStart;
+        await sleep(Math.max(0, 1000 / fps - elapsed));
+      }
+    } finally {
+      if (this.previewGeneration === myGeneration) {
+        this.previewGeneration = 0;
+        if (this.state_.status === "idle") await this.ctx.storage.setAlarm(Date.now());
+      }
     }
   }
 
@@ -247,7 +271,7 @@ export class RaceState extends DurableObject {
     if (this.state_.status !== "idle") return { ok: false, reason: "race must be idle to preview" };
     if (!this.state_.instance) return { ok: false, reason: "no sim instance configured" };
     const grid = centeredMascotFrame(id, size);
-    await this.withReignPaused(() => this.streamPreview(() => grid, MASCOT_PREVIEW_SECONDS));
+    await this.streamPreview(() => grid, MASCOT_PREVIEW_SECONDS);
     return { ok: true };
   }
 
@@ -258,7 +282,7 @@ export class RaceState extends DurableObject {
     if (this.state_.status !== "idle") return { ok: false, reason: "race must be idle to preview" };
     if (!this.state_.instance) return { ok: false, reason: "no sim instance configured" };
     const opts = id === "finale" ? this.finaleOpts() : {};
-    await this.withReignPaused(() => this.streamPreview((t) => scene.frame(t, opts), scene.seconds));
+    await this.streamPreview((t) => scene.frame(t, opts), scene.seconds);
     return { ok: true, seconds: scene.seconds };
   }
 
@@ -269,29 +293,10 @@ export class RaceState extends DurableObject {
     return { color: SCHOOL_INFO[school].color, lane: (LANE_COLS[SCHOOLS.indexOf(school)] + 1) / 9 };
   }
 
-  /** Pause the idle reign's own alarm-driven repaint loop while `fn` streams its own frames
-   * to the building, so the two never interleave; resumes it (if still idle) afterward.
-   *
-   * `deleteAlarm()` alone only cancels a FUTURE alarm — it doesn't stop an `alarm()`
-   * invocation that's already mid-batch (it sleeps between frames, and DO RPCs can run
-   * concurrently with that sleep), so a preview starting mid-batch used to race against the
-   * still-running reign loop and both would push frames at once. `this.previewing` is
-   * checked at the top of every iteration of alarm()'s loop so it yields immediately. */
-  async withReignPaused(fn) {
-    this.previewing = true;
-    await this.ctx.storage.deleteAlarm();
-    try {
-      await fn();
-    } finally {
-      this.previewing = false;
-      if (this.state_.status === "idle") await this.ctx.storage.setAlarm(Date.now());
-    }
-  }
-
   async alarm() {
     if (!this.state_.instance) return;
     const batchStart = Date.now();
-    while (!this.previewing && ANIMATED_STATUSES.includes(this.state_.status) && Date.now() - batchStart < BATCH_MS) {
+    while (this.previewGeneration === 0 && ANIMATED_STATUSES.includes(this.state_.status) && Date.now() - batchStart < BATCH_MS) {
       const now = Date.now();
       await this.advance(now);
       if (!ANIMATED_STATUSES.includes(this.state_.status)) break;
@@ -300,7 +305,7 @@ export class RaceState extends DurableObject {
       await sleep(Math.max(0, 1000 / fps - (Date.now() - now)));
     }
 
-    if (this.previewing) {
+    if (this.previewGeneration !== 0) {
       return; // a preview took over; it re-arms the alarm itself when it's done
     } else if (ANIMATED_STATUSES.includes(this.state_.status)) {
       await this.ctx.storage.setAlarm(Date.now());
