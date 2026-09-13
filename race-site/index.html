@@ -192,27 +192,77 @@ document.querySelectorAll('.cheer').forEach(button=>{button.disabled=true});
   const el = document.getElementById('sound-toggle');
   if (!el) return;
   const icon  = document.getElementById('sound-icon');
+  const label = document.getElementById('sound-label');
   const audio = new Audio('win.m4a');
   audio.preload = 'auto';          // 0.4 MB, so it is ready long before it is needed
 
-  let wanted = false, unlocked = false, playedFor = null;
+  // A quarter-second click, generated here rather than fetched, so the tap can
+  // answer the only question that matters: does this phone actually make a
+  // noise right now? Nobody can debug forty handsets at the finish line, but
+  // each person can check their own before the race starts.
+  const TICK = 'data:audio/wav;base64,UklGRisGAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQcGAACApL/LxKyJZEY2OExskbHFyLmceFY+N0FbfaC7x8Ksi2hKOjtNa46twcW4nHpaQjpDW3ydt8S/q4xrTj4+TmqLqr3Ctp18XUY+RVt6mrPAvaqObVJCQU9qiaa6v7SdfmBKQUdbeJewvbqqj3BVRUNQaYejtryznYBjTURJXHeUrLm4qY9yWUlGUmmFoLO5sZ2CZlFHS1x2kqm2tqiQdVxMSVNog52wtq+dg2lUSk1ddY+ms7OnkXdfT0tUaIGarLSunYRrV01PXXSNo7CxppF4YVJOVmiAmKqxrJyGbVpPUV5zi6Ctr6WSemRVUFdof5Wnrquch3BcUlNfcomeq62kknxmV1JYaH2TpKypnIhxX1VVX3KIm6iro5J9aVpUWmh8kaKqp5uIc2FXV2BxhpmmqaKSfmtcVltoe4+fp6abiXVkWVhhcYWXo6ehkoBtX1lcaHqNnaWkmop3ZltaYnGDlaGloJKBb2FbXWl6jJujo5qKeGheXGNxgpOfo5+SgnBjXF9peYqZoaGZi3lqYF1jcIGRnaKekoJyZV5gaXiJl5+gmIt7bGJfZHCAkJugnZKDc2dgYWp4h5WenpiLfG1jYGVwf46ZnpyShHVoYmJqd4aUnJ2Xi31vZWJmcH6NmJ2akoR2amNka3eFkpqclox+cGdjZ3B+i5abmZGFd2xlZWt3hJCZm5aMf3JoZWhwfYqUmpiRhXhtZmZsdoOPl5mVjH9zamZocXyJk5iXkYZ5b2hnbHaCjpaYlIyAdGtnaXF8iJKXl5CGenBpaG12gYyUl5SMgXVtaWpxe4eQlpaQh3txa2ltdoGLk5aTjIF2bmprcXuGj5SVkId8cmxqbnaAipKVkoyCd29rbHF7hY6TlI+HfXNta252f4mQlJKLgnhwbG1yeoSNkpOPh350bmxvdn+Ij5ORi4N5cW1tcnqDjJGSjod+dW9tb3Z+h46SkIuDenJubnJ6g4uQkY6Hf3ZwbnB2foaNkZCLg3tzb29zeoKKj5COh393cW9xdn6GjJCPi4R7dHBwc3mBiY6QjYeAeHJwcXZ9hYuPj4qEfHVxcHN5gYiNj42HgHlzcHJ2fYSLjo6KhH12cnF0eYCHjI6Mh4F5dHFydn2Eio2NioR9d3NydHmAh4uNjIeBenVyc3Z8g4mMjYqEfnhzcnR5gIaLjYuHgXt1c3N3fIOIjIyJhH54dHN1eX+FioyLh4F7dnN0d3yCiIuMiYR/eXVzdXl/hYmLi4eCfHd0dHd8goeKi4mFf3l1dHV5f4SJi4qHgnx4dXV3fIGGioqJhX96dnV2eX6EiIqKh4J9eHV1d3yBhomKiIWAe3d1dnl+g4eKiYeCfXl2dnh8gYWIiYiFgHt3dnZ5foOHiYmGgn55dnZ4fICFiImIhYB7eHZ3en6ChoiIhoJ+end2eHuAhIeJiIWAfHh3d3p+goaIiIaDfnp4d3h7gISHiIeEgXx5d3d6fYKFh4iGg397eHd4e3+DhoiHhIF9eXh4en2BhYeHhoN/e3h4eXt/g4aHh4SBfXp4eHp9gYSHh4aDf3t5eHl7f4OFh4aEgX16eHh6fYGEhoeFg398eXh5e3+ChYaGhIF+e3l5en2AhIaGhYN/fHp5eXx/goWGhoSBfnt5eXp9gIOFhoWDgH16eXp8foKEhoaEgX57enl6fYCDhYaFg4B9enl6fH6BhIWFhIF+fHp6e32Ag4WFhYOAfXt6enx+gYSFhYSBf3x6ent9gIKEhYWDgH17enp8foGDhYWEgX98e3p7fX+ChIWEg4B+e3p6fH6Bg4SFhIJ/fXt6e31/goSFhIOAfnx7e3x+gYOEhIOCf317e3t9f4KDhISDgH58e3t8foCChISDgn99e3t7fX+Bg4SEg4F+fHt7fH6AgoSEg4J/fXx7fH1/gYOEhIKBfn17e3x+gIKDhIOCgH58e3x9f4GDhIOCgX99fHt8foCCg4SDgoB+fHx8fX+BgoODgoF/fXx8fH6AgoODg4KAfnx8fH1/gYKDg4KBf318fHx+gIGDg4OCgH59fHx9f4CCg4OCgX99fHx9foCB';
+
+  let wanted = false, unlocked = false, playedFor = null, failed = false;
   const KEY = 'koc-sound';
   try { wanted = localStorage.getItem(KEY) === 'on'; } catch (e) {}
 
   function paint(){
-    el.classList.toggle('on', wanted);
-    icon.textContent = wanted ? '🔊' : '🔇';
-    el.setAttribute('aria-label', wanted ? 'Sound on. Tap to mute.'
-                                         : 'Sound off. Tap for sound.');
+    // "On" means on: armed AND actually able to play. A remembered preference
+    // from a previous visit is not permission -- browsers throw that away on
+    // reload, and showing a confident speaker icon over an element that cannot
+    // play is how a phone ends up silent with nobody realising until the end.
+    const live = wanted && unlocked && !failed;
+    el.classList.toggle('on', live);
+    icon.textContent = failed ? '⚠️' : live ? '🔊' : '🔇';
+    if (label) label.textContent = failed ? 'tap again' : 'tap for sound';
+    el.setAttribute('aria-label', live ? 'Sound on. Tap to mute.'
+                                       : 'Sound off. Tap for sound.');
   }
   paint();
+
+  // Keeping the screen awake. A locked phone will not start new audio, and
+  // phones lock in half a minute. Asked for on the tap, and asked for again
+  // whenever the page comes back to the front, because the lock is dropped
+  // every time the phone is pocketed.
+  let lock = null;
+  async function keepAwake(){
+    if (!wanted || !('wakeLock' in navigator)) return;
+    try { lock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && !lock) keepAwake();
+  });
 
   el.addEventListener('click', () => {
     wanted = !wanted;
     try { localStorage.setItem(KEY, wanted ? 'on' : 'off'); } catch (e) {}
-    unlocked = true;
+    failed = false;
+
+    if (!wanted){
+      if (!audio.paused) audio.pause();
+      if (lock){ lock.release().catch(() => {}); lock = null; }
+      paint();
+      return;
+    }
+
+    // THE UNLOCK. This has to be a real play() on this exact element, inside
+    // the handler for a real tap. A phone does not care what we set a variable
+    // to; it cares whether a human asked for sound. Start it, stop it, rewind
+    // it -- from here on the element is allowed to speak on its own.
+    audio.load();                        // start fetching now, not at the finish
+    audio.play().then(() => {
+      audio.pause();
+      audio.currentTime = 0;
+      unlocked = true;
+      paint();
+    }).catch(() => {
+      failed = true;                     // say so, rather than fail silently later
+      paint();
+    });
+
+    new Audio(TICK).play().catch(() => {});   // proof the speaker works
+    keepAwake();
     paint();
-    if (!wanted && !audio.paused) audio.pause();
   });
 
   function onState(s){
@@ -237,7 +287,7 @@ document.querySelectorAll('.cheer').forEach(button=>{button.disabled=true});
 
     playedFor = who;
     try { audio.currentTime = Math.max(0, since); } catch (e) {}
-    audio.play().catch(() => { playedFor = null; });    // let it try again
+    audio.play().catch(() => { playedFor = null; failed = true; paint(); });
   }
 
   // Piggyback on the page's existing 500 ms poll rather than adding a second
