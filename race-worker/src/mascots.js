@@ -1,6 +1,4 @@
-// Ported verbatim from the `mascots` branch (tamagochi-mascots-python/tamagotchi/mascots.py
-// + schools.py) so the race uses the same identities and tower colors as the rest of the
-// project. Only the 4 racing schools are kept here.
+// The 4 racing schools: names and lane colors. Mascot pixel art lives in sprites.js.
 
 export const SCHOOLS = ["mit", "harvard", "bu", "neu"];
 

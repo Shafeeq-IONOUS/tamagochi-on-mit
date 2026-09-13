@@ -1,4 +1,5 @@
 export { RaceState } from "./race-state.js";
+import { validateSceneConfig } from "./scenes.js";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
@@ -55,6 +56,18 @@ export default {
         const denied = requireAdmin(request, env);
         if (denied) return denied;
         return json(await race.reset());
+      }
+
+      if (url.pathname === "/api/admin/config" && request.method === "POST") {
+        const denied = requireAdmin(request, env);
+        if (denied) return denied;
+        const body = await request.json().catch(() => ({}));
+        try {
+          validateSceneConfig(body); // reject bad input with a 400 before touching state
+        } catch (err) {
+          return json({ error: err.message }, { status: 400 });
+        }
+        return json(await race.setConfig(body));
       }
 
       if (url.pathname === "/api/admin/rotate-instance" && request.method === "POST") {

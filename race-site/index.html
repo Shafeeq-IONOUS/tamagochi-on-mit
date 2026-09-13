@@ -158,7 +158,15 @@
     });
 
     bannerEl.classList.toggle("finished", state.status === "finished");
-    if (state.status === "idle") bannerEl.textContent = "Waiting for the race to start…";
+    // phaseEndsAt is server time; correct for this phone's clock drift
+    const secondsLeft = state.phaseEndsAt
+      ? Math.max(0, Math.ceil((state.phaseEndsAt - state.serverTime) / 1000))
+      : 0;
+    const king = SCHOOLS.find((s) => s.id === state.champion);
+    const kingName = king ? `${king.mascot}` : "The Duck King";
+    if (state.status === "idle") bannerEl.textContent = `👑 ${kingName} rules the Charles. Waiting for the race…`;
+    else if (state.status === "intro") bannerEl.textContent = `👑 ${kingName} is giving up the crown…`;
+    else if (state.status === "countdown") bannerEl.textContent = `Get ready… ${secondsLeft}`;
     else if (state.status === "running") bannerEl.textContent = "Race is on — cheer!";
     else if (state.status === "finished") {
       const winner = SCHOOLS.find((s) => s.id === state.winner);

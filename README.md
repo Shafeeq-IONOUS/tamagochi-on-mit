@@ -11,10 +11,6 @@ All the code lives in [`tamagochi-characters-python/`](tamagochi-characters-pyth
 the original Tetris game plus the pet character picker and the client for the
 [Green Building sim](https://sundai.willsarg.com).
 
-School mascots (MIT beaver, John Harvard, NEU husky, BU terrier, Tufts elephant, BC eagle, Boston duckling),
-a flash-safe display guard, and the crowd-raised pet game live in
-[`tamagochi-mascots-python/`](tamagochi-mascots-python) — stdlib only, see its README.
-
 ## Setup
 
 ```bash
@@ -71,6 +67,7 @@ building as the crowd cheers for them from their phones. That's a separate app:
 - [`race-site/`](race-site) — the Cloudflare Pages frontend: a public cheer page and an
   admin page to start/stop/reset the race.
 
-Someone else owns the mascot art/animation ("cheering models", `mascots` branch) and the
-frame transitions; `race-worker/src/render.js` draws simple solid lane bars for now and is
-meant to be swapped out once those land.
+The story around the race — the Duck King giving up the crown, the countdown, and the
+winner reigning until the next round — lives in `race-worker/src/scenes.js`, with the
+mascot art in `race-worker/src/sprites.js`. Every frame goes through a photosensitivity
+guard (`race-worker/src/safety.js`). See the [race-worker README](race-worker#the-show).
