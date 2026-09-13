@@ -4,9 +4,9 @@ A pretend Arduino.
 The board speaks a deliberately tiny protocol -- one line, thirty times a
 second:
 
-    812,0        <- plenty of light, no knock
-    430,0        <- a hand is over the sensor
-    790,1        <- somebody knocked
+    812,0,512,900    <- plenty of light, no knock, knobs mid and high
+    430,0,512,900    <- a hand is over the sensor
+    790,1,512,900    <- somebody knocked
 
 That is small enough to imitate exactly, so the whole chain from sensor to
 lights can be tested with no hardware attached. Which matters, because the
@@ -29,6 +29,8 @@ class FakeArduino:
 
     def __init__(self, bright=810, quiet=True):
         self.bright = bright
+        self.volume_knob = 512
+        self.bright_knob = 900
         self._master, self._slave = pty.openpty()
         self.port = os.ttyname(self._slave)
         self._hand = 0.0          # 0 = nothing there, 1 = fully covered
@@ -48,7 +50,8 @@ class FakeArduino:
             knock = 1 if self._knock else 0
             self._knock = False
             try:
-                os.write(self._master, f"{reading},{knock}\n".encode())
+                os.write(self._master,
+                         f"{reading},{knock},{self.volume_knob},{self.bright_knob}\n".encode())
             except OSError:
                 break
             time.sleep(1 / 30)

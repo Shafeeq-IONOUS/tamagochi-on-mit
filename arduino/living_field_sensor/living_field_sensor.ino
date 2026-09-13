@@ -5,15 +5,33 @@
   This board has one job: shout two numbers down the USB cable, thirty times a
   second. The laptop does all the thinking.
 
-      SHADOW,KNOCK
-      812,0
-      430,0      <- a hand is covering the light sensor
-      790,1      <- somebody knocked
+      SHADOW,KNOCK,VOLUME,BRIGHT
+      1023,0,243,293   <- no light sensor, no piezo, two knobs
+      1023,0,800,293   <- somebody turned the volume up
+      1023,0,800,980   <- and the brightness up
+
+  With no light sensor wired, SHADOW is always 1023 -- "nothing is blocking
+  the light" -- and KNOCK is always 0. The laptop reads that as nobody being
+  there, which is exactly right, and takes its touches from the phone page
+  instead.
 
   SHADOW is how much light is falling on the sensor. Bright room = a big number.
   Put your hand over it and the number drops. That is the building noticing you.
 
   KNOCK is 1 for one single reading when the piezo disc is tapped, otherwise 0.
+
+  VOLUME and BRIGHT are the two knobs, 0 to 1023.
+
+    VOLUME  turns the music up and down. The laptop passes it to Spotify.
+            The board is a CONTROLLER, not a player: Spotify streams are
+            DRM-protected and need OAuth, TLS and a codec, and this board has
+            thirty-two kilobytes of memory and no audio output. There is
+            nothing to port and no point trying.
+
+    BRIGHT  dims the building. Worth having a physical one, because you can
+            hand somebody the knob, let them turn it all the way up, and show
+            them it still cannot pass the safety ceiling. That is a better
+            argument than a paragraph about it.
 
   ---------------------------------------------------------------------------
   AND IT LISTENS BACK
@@ -48,6 +66,15 @@
       black wire -> GND
       red wire   -> A1  AND  through a 1M resistor -> GND
 
+  Two knobs (potentiometers, three legs each):
+      left leg  -> GND
+      right leg -> 5V
+      middle leg -> A2 on the first knob, A3 on the second
+
+    The middle leg is the wiper: it reports where the knob is pointing, as a
+    voltage somewhere between the two outer legs. Which way round the outer
+    legs go only decides which way is "up".
+
     This part is normally a buzzer. Tapping it makes a tiny bit of electricity,
     so it works backwards as a knock detector. The big resistor drains that
     charge away so it is ready for the next knock.
@@ -60,8 +87,32 @@
 
 ArduinoLEDMatrix matrix;
 
-const int LIGHT_PIN = A0;
-const int KNOCK_PIN = A1;
+// ---------------------------------------------------------------------------
+//  WHAT IS ACTUALLY WIRED
+//
+//  Right now: two knobs, on A0 and A1. Nothing else.
+//
+//  Set a pin to -1 and that input is simply not there. The laptop treats every
+//  input as optional, so a half-built rig works exactly as well as a finished
+//  one -- it just does less.
+// ---------------------------------------------------------------------------
+const int VOLUME_PIN = A0;    // knob one  -> music volume
+const int BRIGHT_PIN = A1;    // knob two  -> dims the building
+
+// Nothing is wired to the light sensor or the piezo, so those two channels
+// are simply reported as "nothing there" rather than read from a pin.
+//
+// Written as plain constants instead of a pin of -1 and a clever guard. The
+// guarded version compiled and uploaded happily and then the board went silent
+// -- analogRead(-1) still sat in the binary. Not worth the cleverness.
+const int NO_LIGHT = 1023;    // 1023 = nothing blocking the light
+const int NO_KNOCK = 0;
+
+// Potentiometers jitter by a count or two constantly. Smoothing them here
+// costs nothing and stops the laptop firing a volume change thirty times a
+// second over noise that nobody asked for.
+int volSmooth = 512;
+int brtSmooth = 900;
 
 // How hard a tap has to be before it counts. Raise it if the sensor is jumpy,
 // lower it if gentle taps are being missed.
@@ -88,11 +139,20 @@ int inlen = 0;
 void setup() {
   Serial.begin(115200);
   matrix.begin();
+  // Deliberately NOT waiting for a serial connection here. `while (!Serial);`
+  // is the usual line and it would mean the board does nothing at all until a
+  // laptop opens the port -- including not driving its own LED grid.
 }
 
 void loop() {
-  int shadow = analogRead(LIGHT_PIN);      // 0 .. 1023
-  int tap    = analogRead(KNOCK_PIN);
+  // 1023 means "plenty of light, nothing blocking it", which is what the
+  // laptop should believe when there is no light sensor at all.
+  int shadow = NO_LIGHT;
+  int tap    = NO_KNOCK;
+
+  // A slow average: mostly the old value, a little of the new one.
+  volSmooth = (volSmooth * 7 + analogRead(VOLUME_PIN)) / 8;
+  brtSmooth = (brtSmooth * 7 + analogRead(BRIGHT_PIN)) / 8;
 
   int knock = 0;
   unsigned long now = millis();
@@ -101,9 +161,35 @@ void loop() {
     lastKnockAt = now;
   }
 
-  Serial.print(shadow);
-  Serial.print(",");
-  Serial.println(knock);
+  // Only speak when somebody is listening, and only when there is room.
+  //
+  // This is the difference between a board that works and a board that dies
+  // silently ten minutes into a demo.
+  //
+  // Serial here is USB CDC. When the laptop closes the port the board carries
+  // on printing into a buffer nobody is draining, and once that buffer is full
+  // Serial.print BLOCKS -- forever. The sketch stops, the little grid freezes,
+  // and the board stays dead until it is physically unplugged. It looks exactly
+  // like a flashing problem and it is not.
+  //
+  //   if (Serial)   is a host actually connected?
+  //
+  // That one test is enough: with no host there is nothing to fill, so nothing
+  // to block on, and the moment something reconnects it starts talking again.
+  //
+  // The first attempt also required availableForWrite() > 32. That looked more
+  // careful and made the board completely silent -- this core's CDC does not
+  // report free space the way the check assumed. A safety check that silences
+  // the thing it is protecting is worse than no check.
+  if (Serial) {
+    Serial.print(shadow);
+    Serial.print(",");
+    Serial.print(knock);
+    Serial.print(",");
+    Serial.print(volSmooth);
+    Serial.print(",");
+    Serial.println(brtSmooth);
+  }
 
   readFromLaptop();
 
@@ -152,7 +238,10 @@ void readFromLaptop() {
   responds is the best thirty seconds of the demo, and it costs nothing.
 */
 void drawMiniTower(int shadow, int knock) {
-  int covered = map(constrain(shadow, 0, 1023), 1023, 0, 0, 8);
+  // With no light sensor there is no shadow to show, so the little grid
+  // follows the brightness knob -- something in your hand that moves when you
+  // turn it.
+  int covered = map(constrain(brtSmooth, 0, 1023), 0, 1023, 0, 8);
   for (int row = 0; row < 8; row++) {
     for (int col = 0; col < 12; col++) {
       bool lit = (8 - row) <= covered;     // fills from the bottom upward

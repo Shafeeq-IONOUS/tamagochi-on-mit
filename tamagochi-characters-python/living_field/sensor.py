@@ -18,6 +18,10 @@ class NullSensor:
     """What you get when there is no hardware. Always calm, never fails."""
     available = False
     port = None
+    # No knobs to read. None means "no opinion", so the volume and the
+    # brightness are simply left alone rather than driven to zero.
+    volume = None
+    bright = None
 
     def read(self):
         """Returns (hand_closeness 0..1, knocked_just_now)."""
@@ -46,6 +50,10 @@ class SerialSensor:
     # the first few seconds, so you do not have to re-calibrate for each room.
     CALIBRATION_SECONDS = 4.0
 
+    # The knobs, 0 to 1, or None when the board has none wired up.
+    volume = None
+    bright = None
+
     def __init__(self, port, baud=115200):
         import serial  # imported here so the app still runs without pyserial
         self.port = port
@@ -68,11 +76,16 @@ class SerialSensor:
                 continue
             if not line or "," not in line:
                 continue
+            # Two fields from an older board, four from one with knobs. Accept
+            # both, so a half-built rig still works.
+            parts = line.split(",")
             try:
-                shadow_s, knock_s = line.split(",", 1)
-                shadow = int(shadow_s)
-                knock = knock_s.strip() == "1"
-            except ValueError:
+                shadow = int(parts[0])
+                knock = parts[1].strip() == "1"
+                if len(parts) >= 4:
+                    self.volume = self._knob(0, int(parts[2]))
+                    self.bright = self._knob(1, int(parts[3]))
+            except (ValueError, IndexError):
                 continue
 
             # Learn the room. For the first few seconds, whatever the brightest
@@ -88,7 +101,55 @@ class SerialSensor:
             if knock:
                 self._knock = True
 
+    # What each knob has actually been seen to do: [lowest, highest].
+    # Learned, not assumed.
+    _range = None
+
+    # A knob has to move at least this much before we believe it is a knob
+    # rather than a pin sitting at a fixed voltage.
+    KNOB_ALIVE = 40
+
+    def _knob(self, i, raw):
+        """
+        Turn a raw reading into 0 to 1, using the range this knob really has.
+
+        Assuming 0 to 1023 is wrong for any potentiometer that is not perfectly
+        wired between 5V and GND -- and one measured here only swings 438 to
+        628, about a fifth of the nominal range, because there is not a full
+        five volts across it. Taking that literally would mean the knob only
+        ever moved the volume between 43% and 61%.
+
+        So each knob learns its own ends as you turn it. Sweep it once and it
+        maps that sweep onto the full range. Imperfect wiring stops mattering.
+        """
+        # Each knob learns its own ends, starting from the first value IT
+        # reports. Seeding both from whichever was read first made the second
+        # knob inherit the first one's position -- so a dead pin sitting at 116
+        # next to a live one at 438 looked like a 322-count range, and a knob
+        # that had never moved appeared to be working.
+        if self._range is None:
+            self._range = [None, None]
+        if self._range[i] is None:
+            self._range[i] = [raw, raw]
+        lo, hi = self._range[i]
+        if raw < lo:
+            self._range[i][0] = lo = raw
+        if raw > hi:
+            self._range[i][1] = hi = raw
+        span = hi - lo
+        if span < self.KNOB_ALIVE:
+            # Not enough movement yet to call it a knob. Sit in the middle
+            # rather than jumping to an extreme on noise.
+            return 0.5
+        return max(0.0, min(1.0, (raw - lo) / span))
+
     def read(self):
+        """
+        (hand closeness 0 to 1, did somebody knock since last asked).
+
+        The knock is consumed by reading it, so one tap is one knock however
+        often this is called.
+        """
         knocked, self._knock = self._knock, False
         return self._closeness, knocked
 

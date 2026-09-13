@@ -14,6 +14,7 @@ Controls
     SPACE     touch it, at the foot of the tower
     click     touch it anywhere on the grid
     D         run the twenty-minute demo story (D again to stop)
+    P         start / stop the music in music/
     R         start King of the Charles -- four crews, the room rows them
     S         fire the rare surge now (it also happens on its own)
     M         say the weather in words now (it also does this on its own,
@@ -73,6 +74,8 @@ from living_field.text import Ticker, weather_message
 from living_field.control import Control
 from living_field.demo import Director, SAY_WEATHER_AT
 from living_field.race import Race, CREWS, finale, FINALE
+from living_field.audio import Audio      # Spotify, if you prefer it
+from living_field.music import Music
 
 FPS = 30
 BRAIN_HZ = 2.0            # how often it gets to think
@@ -186,14 +189,6 @@ def main():
     #
     #     ~/hack140/start plucky-eagle
     #
-    # Give a room name and the same frames go to the Green Building simulator
-    # as well as the window here:
-    #
-    #     python3 run_living_field.py plucky-eagle
-    #
-    # The sending is gbsim's WebDisplay, already in this repo -- it keeps a
-    # connection alive and drops stale frames rather than queueing them, which
-    # is better than the version this started with.
     room = (sys.argv[1] if len(sys.argv) > 1 else os.environ.get("GB_ROOM", "")).strip()
     local = TrueView()
     if room:
@@ -264,8 +259,19 @@ def main():
     next_ambient = 0.0
     next_think = 0.0
 
+    # Your set, from the music/ folder. Local files rather than Spotify: no
+    # network, no ads between tracks, no licensing question for a public
+    # square, and the volume knob works live. audio.py still has the Spotify
+    # path if you would rather use that for a rehearsal.
+    music = Music(enabled=os.environ.get("GB_AUDIO", "1") != "0")
+    if music.ready and music.tracks:
+        music.start()
+    crowned = False
+
     if control.available:
         print(f"touch page: {control.url}   (open it on a phone to grow branches)")
+    if music.tracks:
+        print(f"music     : {len(music.tracks)} track(s) from music/")
     if room:
         print(f"simulator : https://sundai.willsarg.com/{room}?view=river")
 
@@ -321,10 +327,16 @@ def main():
                 elif event.key == pygame.K_r:
                     race.start(t)
                     race_won_at = None
+                    crowned = False
                 elif event.key == pygame.K_d:
                     director.toggle(t)
                     if not director.running:
                         forced = None
+                elif event.key == pygame.K_p:
+                    if music.playing:
+                        music.stop()
+                    else:
+                        music.start()
                 elif event.key == pygame.K_m:
                     # Say the weather now. On its own it speaks for sixteen
                     # seconds out of every hundred and fifty, which is right
@@ -350,6 +362,11 @@ def main():
 
         # ---- the hardware, if there is any ----------------------------
         closeness, knocked = sensor.read()
+
+        # The knobs, if the board has them.
+        if sensor.volume is not None:
+            music.volume(sensor.volume)
+        music.tick(dt)
         if closeness > 0.15:
             field.poke(1.0, 0.5, 0.055 * closeness, 0.20)
             reaction.poke(1.0, 0.5, 0.05 * closeness, 0.10)
@@ -515,6 +532,10 @@ def main():
             else:
                 if race_won_at is None:
                     race_won_at = race.finished_at or t
+                    if not crowned:
+                        # Over the top of the music, not instead of it.
+                        music.crowning()
+                        crowned = True
                     ticker.set(f"{race.winner.short} WINS")
                     message_started = race_won_at + FINALE - 2.4
                     message_until = message_started + ticker.duration()
@@ -532,6 +553,15 @@ def main():
                     m = letters[:, :, None]
                     white = np.full((ROWS, COLS, 3), 0.95, dtype=np.float32)
                     rgb = rgb * (1.0 - 0.9 * m) + white * (0.9 * m)
+
+        # The brightness knob, if there is one.
+        #
+        # Applied BEFORE the governor on purpose. Turn it all the way up in
+        # front of somebody and the building still cannot pass its ceiling,
+        # because the ceiling is downstream of the knob. That is a better
+        # argument about safety than a paragraph about it.
+        if sensor.bright is not None:
+            rgb = rgb * (0.25 + 0.75 * sensor.bright)
 
         rgb = governor.apply(rgb)      # nothing reaches the windows unchecked
 
@@ -563,7 +593,13 @@ def main():
         elapsed = time.perf_counter() - frame_start
         if elapsed < 1.0 / FPS:
             time.sleep(1.0 / FPS - elapsed)
+        else:
+            # Even when a frame overruns, hand the CPU over briefly. Without
+            # this a run of slow frames never yields and the audio thread is
+            # starved for as long as it lasts.
+            time.sleep(0.001)
 
+    music.stop()
     sensor.close()
     weather.close()
     control.close()
