@@ -30,9 +30,11 @@ curl -X POST https://sundai.willsarg.com/api/instances \
 ```
 
 This copies a `send_url`/`view_url`/`ws_url` back. Both scripts below default to the
-instance `misty-newt`; pass a different name as the first argument if that one is
-ever reset (only one program should target an instance at a time — two at once makes
-the display flicker between them).
+instance `cobalt-mole` — the same one the [race website](race-worker) uses in
+production (its `SIM_INSTANCE` secret) — so the whole project stays on one simulator
+instance instead of everyone spinning up their own. Pass a different name as the first
+argument if you want to test something without disturbing the shared one; only one
+program should target a given instance at a time, or the display flickers between them.
 
 ## Run
 
