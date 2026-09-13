@@ -81,8 +81,8 @@ export default {
       if (url.pathname === "/api/admin/preview/mascot" && request.method === "POST") {
         const denied = requireAdmin(request, env);
         if (denied) return denied;
-        const { id } = await request.json().catch(() => ({}));
-        return json(await race.previewMascot(id));
+        const { id, size } = await request.json().catch(() => ({}));
+        return json(await race.previewMascot(id, size === 5 ? 5 : 9));
       }
 
       // Debug: push a short sequence of frames for one ported living-field scene

@@ -1,39 +1,62 @@
 // The story around the race, as pure (time, state) -> 17x9 frame functions.
 //
 //   idle       reign      the King of the Charles (the Duck King until someone wins) idles, crowned
-//   intro      abdicate   see INTRO_BEATS below
+//   intro      abdicate   see INTRO_BEATS below: the king gives up the crown and waddles away,
+//                         then each challenger is introduced and takes its lane
 //   countdown  3, 2, 1    soft digits while the challengers wait on the riverbank
 //   running / finished    the climb itself (render.js)
 //
 // The last frame of each scene is the first frame of the next, so hand-offs don't jump.
-import { SCHOOLS } from "./mascots.js";
-import { BANNER, COLS, LANE_COLS, OFF, RIVER_ROW, ROWS, START_TOP, buildFrame, drawRiverRow } from "./render.js";
+import { SCHOOLS, SCHOOL_INFO } from "./mascots.js";
+import {
+  BANNER,
+  COLS,
+  LANE_COLS,
+  OFF,
+  RIVER_ROW,
+  ROWS,
+  START_TOP,
+  buildFrame,
+  drawRiverRow,
+  softenColor,
+} from "./render.js";
 import { CROWN, DIGITS, GOLD, MASCOTS, MASCOT_FOR_SCHOOL, blank, blit, drawLaneMascot, mix } from "./sprites.js";
 
-export const DEFAULT_SCENE_CONFIG = { introSeconds: 12, countdownSeconds: 3 };
-// Below ~8 s the intro beats blur together on a building this size.
-export const SCENE_CONFIG_LIMITS = { introSeconds: [8, 30], countdownSeconds: [0, 10] };
+export const DEFAULT_SCENE_CONFIG = { introSeconds: 22, countdownSeconds: 3 };
+// Shorter than ~14 s and the beats (especially the four introductions) blur together.
+export const SCENE_CONFIG_LIMITS = { introSeconds: [14, 45], countdownSeconds: [0, 10] };
 export const ANIMATED_STATUSES = ["idle", "intro", "countdown"];
 
-// Beat boundaries in ms for a 12 s intro; they stretch or shrink with the configured length.
+// Beat boundaries in ms for a 22 s intro; they stretch or shrink with the configured length.
 export const INTRO_BEATS = {
-  holdEnd: 1500, //       0-1.5  the king, crowned, stands still
-  bowEnd: 2500, //      1.5-2.5  bows: closes its eyes and dips one floor
-  riseEnd: 4500, //     2.5-4.5  the crown lifts off, floor by floor, to the top of the tower
-  shineEnd: 5500, //    4.5-5.5  the crown waits at the top
-  meltEnd: 6500, //     5.5-6.5  the crown spreads into the gold finish line
-  sinkEnd: 8500, //     6.5-8.5  the king sinks into the Charles
-  riseChallengers: 9000, // 9.0-11.5 the four challengers climb out of the river, one by one
-  end: 12000,
+  holdEnd: 1500, //         0-1.5   the king, crowned, stands still
+  bowEnd: 2500, //        1.5-2.5   bows: closes its eyes and dips one floor
+  riseEnd: 4500, //       2.5-4.5   the crown lifts off, floor by floor, to the top of the tower
+  shineEnd: 5500, //      4.5-5.5   the crown waits at the top
+  meltEnd: 6500, //       5.5-6.5   the crown spreads into the gold finish line
+  waddleEnd: 9500, //     6.5-9.5   the king waddles off the side of the tower, a window at a time
+  introductions: 9500, // 9.5-21.5  each challenger in turn (INTRODUCTION ms each): rises big from the
+  //                                river over its school colour, cheers, blinks, then takes its lane
+  end: 22000,
+};
+const INTRODUCTION = {
+  length: 3000,
+  riseEnd: 900, //    rises from the river to the middle of the tower
+  cheerStart: 1100, // mouth open
+  cheerEnd: 1600,
+  blinkStart: 1900,
+  blinkEnd: 2050,
+  holdEnd: 2200, //   then sinks back down (until sinkEnd) while its mini climbs onto the riverbank
+  sinkEnd: 2500,
+  miniStart: 2000,
 };
 
 const KING_TOP = 5; // 9x9 king on rows 5-13, crown on rows 3-4
 const CROWN_REST_TOP = KING_TOP - 2;
+const PEDESTAL_ROW = KING_TOP + 9; // just under a centred 9x9 mascot
 const RIPPLE = [30, 80, 140];
 const DIGIT_COLOR = [150, 150, 150];
 const DIGIT_TOP = 4; // rows 4-8, centred above the challengers
-const CHALLENGER_STAGGER = 500;
-const CHALLENGER_RISE = 1000;
 
 const ease = (x) => 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, x)));
 const progressBetween = (t, start, end) => Math.max(0, Math.min(1, (t - start) / (end - start)));
@@ -53,6 +76,21 @@ export function validateSceneConfig(input = {}, base = DEFAULT_SCENE_CONFIG) {
 
 const kingMascot = (champion) => MASCOTS[MASCOT_FOR_SCHOOL[champion] ?? "duck"];
 
+/** Intro beat times in ms, scaled to the configured intro length. */
+function beatsFor(introSeconds) {
+  const k = (introSeconds * 1000) / INTRO_BEATS.end;
+  const beats = Object.fromEntries(Object.entries(INTRO_BEATS).map(([name, ms]) => [name, ms * k]));
+  const intro = Object.fromEntries(Object.entries(INTRODUCTION).map(([name, ms]) => [name, ms * k]));
+  return { ...beats, intro };
+}
+
+/** Which school is being introduced `t` ms into the intro (null outside the introductions). */
+export function introducingAt(t, { introSeconds = DEFAULT_SCENE_CONFIG.introSeconds } = {}) {
+  const b = beatsFor(introSeconds);
+  const i = Math.floor((t - b.introductions) / b.intro.length);
+  return i >= 0 && i < SCHOOLS.length ? SCHOOLS[i] : null;
+}
+
 function drawRiver(grid, t, { ripple = true } = {}) {
   drawRiverRow(grid);
   if (ripple) grid[RIVER_ROW][Math.floor(t / 700) % COLS] = RIPPLE;
@@ -66,13 +104,11 @@ function drawBanner(grid, color = BANNER) {
   for (let c = 0; c < COLS; c++) grid[0][c] = color;
 }
 
-/** Challengers on the riverbank; `rise` 0..1 per school (0 = still under the water). */
-function drawChallengers(grid, rise = () => 1) {
-  SCHOOLS.forEach((school, i) => {
-    const k = ease(rise(i));
-    if (k <= 0) return;
-    drawLaneMascot(grid, school, LANE_COLS[i], Math.round(RIVER_ROW + 1 - k * (RIVER_ROW + 1 - START_TOP)));
-  });
+/** A challenger's mini on the riverbank; `rise` 0..1 (0 = still under the water). */
+function drawChallenger(grid, i, rise = 1) {
+  const k = ease(rise);
+  if (k <= 0) return;
+  drawLaneMascot(grid, SCHOOLS[i], LANE_COLS[i], Math.round(RIVER_ROW + 1 - k * (RIVER_ROW + 1 - START_TOP)));
 }
 
 export function reignFrame(t, { champion = null } = {}) {
@@ -86,19 +122,16 @@ export function reignFrame(t, { champion = null } = {}) {
   return grid;
 }
 
-export function introFrame(t, { champion = null, introSeconds = DEFAULT_SCENE_CONFIG.introSeconds } = {}) {
-  const at = (ms) => (ms * introSeconds * 1000) / INTRO_BEATS.end;
-  const b = Object.fromEntries(Object.entries(INTRO_BEATS).map(([k, ms]) => [k, at(ms)]));
-  const grid = blank(ROWS, COLS, OFF);
-  const king = kingMascot(champion);
+/** The king bows, gives up the crown (it becomes the finish line) and waddles off the tower. */
+function drawAbdication(grid, t, b, king) {
+  if (t < b.waddleEnd) {
+    const bow = Math.round(ease(progressBetween(t, b.holdEnd, b.bowEnd)));
+    // Whole-window steps at a steady pace; faster steps or hops read as flicker at this scale.
+    const left = t >= b.meltEnd ? Math.floor(progressBetween(t, b.meltEnd, b.waddleEnd) * (COLS + 1)) : 0;
+    const pose = t < b.holdEnd || t >= b.meltEnd ? "idle" : "sleep"; // eyes closed while bowing
+    blit(grid, king.poses[pose], KING_TOP + (t >= b.meltEnd ? 0 : bow), left, king.colors);
+  }
 
-  // the king: still, then a bow with closed eyes, then sinking below the river row
-  const bow = Math.round(ease(progressBetween(t, b.holdEnd, b.bowEnd)));
-  const sink = ease(progressBetween(t, b.meltEnd, b.sinkEnd));
-  const kingTop = KING_TOP + bow + Math.round(sink * (ROWS - KING_TOP - bow));
-  if (kingTop < RIVER_ROW) blit(grid, king.poses[t < b.holdEnd ? "idle" : "sleep"], kingTop, 0, king.colors);
-
-  // the crown: lifts off to rows 0-1, waits, then spreads along row 0 into the finish line
   const crownTop = Math.round(CROWN_REST_TOP * (1 - ease(progressBetween(t, b.bowEnd, b.riseEnd))));
   const melt = ease(progressBetween(t, b.shineEnd, b.meltEnd));
   if (melt < 1) drawCrown(grid, crownTop, 1 - melt);
@@ -108,12 +141,40 @@ export function introFrame(t, { champion = null, introSeconds = DEFAULT_SCENE_CO
       if (Math.abs(c - (COLS - 1) / 2) <= reach) grid[0][c] = mix(GOLD, BANNER, melt);
     }
   }
+}
 
-  // the river rolls over the sinking king; it stills once the challengers start climbing out
-  drawRiver(grid, t, { ripple: t < b.riseChallengers });
-  drawChallengers(grid, (i) =>
-    progressBetween(t, b.riseChallengers + at(i * CHALLENGER_STAGGER), b.riseChallengers + at(i * CHALLENGER_STAGGER + CHALLENGER_RISE)),
-  );
+/** Each challenger rises big over its school colour, cheers, blinks, then takes its lane. */
+function drawIntroductions(grid, t, b) {
+  const { intro } = b;
+  SCHOOLS.forEach((school, i) => {
+    const local = t - b.introductions - i * intro.length;
+    if (local < 0 || local >= intro.length) return; // not yet, or already on the riverbank
+
+    const mascot = MASCOTS[MASCOT_FOR_SCHOOL[school]];
+    const up = ease(progressBetween(local, 0, intro.riseEnd));
+    const down = ease(progressBetween(local, intro.holdEnd, intro.sinkEnd));
+    const top = Math.round(RIVER_ROW + 1 - up * (RIVER_ROW + 1 - KING_TOP) + down * (RIVER_ROW + 1 - KING_TOP));
+    const pedestal = mix(OFF, softenColor(SCHOOL_INFO[school].color), 0.45 * up * (1 - down));
+    for (let c = 0; c < COLS; c++) grid[PEDESTAL_ROW][c] = pedestal;
+
+    const cheering = local >= intro.cheerStart && local < intro.cheerEnd;
+    const blinking = local >= intro.blinkStart && local < intro.blinkEnd;
+    const pose = cheering ? "eat" : blinking ? "blink" : "idle";
+    if (top <= RIVER_ROW) blit(grid, mascot.poses[pose], top, 0, mascot.colors);
+    drawChallenger(grid, i, progressBetween(local, intro.miniStart, intro.length));
+  });
+}
+
+export function introFrame(t, { champion = null, introSeconds = DEFAULT_SCENE_CONFIG.introSeconds } = {}) {
+  const b = beatsFor(introSeconds);
+  const grid = blank(ROWS, COLS, OFF);
+  drawAbdication(grid, t, b, kingMascot(champion));
+  drawIntroductions(grid, t, b);
+  drawRiver(grid, t, { ripple: t < b.introductions });
+  // minis already on the riverbank stay in front of the river row
+  SCHOOLS.forEach((_, i) => {
+    if (t - b.introductions - i * b.intro.length >= b.intro.length) drawChallenger(grid, i);
+  });
   return grid;
 }
 
@@ -121,7 +182,7 @@ export function countdownFrame(t, { countdownSeconds = DEFAULT_SCENE_CONFIG.coun
   const grid = blank(ROWS, COLS, OFF);
   drawBanner(grid);
   drawRiver(grid, t, { ripple: false });
-  drawChallengers(grid);
+  SCHOOLS.forEach((_, i) => drawChallenger(grid, i));
 
   const remaining = countdownSeconds * 1000 - t;
   const digit = Math.ceil(remaining / 1000);

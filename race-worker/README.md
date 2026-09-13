@@ -75,7 +75,7 @@ response or shipped to the browser.
 | Status | Default length | On the building |
 | --- | --- | --- |
 | `idle` | until the host presses Start | **Reign:** the King of the Charles idles with a crown on its head, the river along the bottom floor. The Duck King rules until someone wins; after that, the last winner |
-| `intro` | 12 s (8-30) | **Abdication:** the king holds still, bows with closed eyes, the crown lifts floor by floor to the top and spreads into the gold finish line, the king sinks into the Charles, and the four challengers climb out of the river one by one (beats in `INTRO_BEATS`, `src/scenes.js`) |
+| `intro` | 22 s (14-45) | **Abdication:** the king holds still, bows with closed eyes, the crown lifts floor by floor to the top and spreads into the gold finish line, and the king waddles off the side of the tower. **Introductions:** each challenger in lane order (MIT, Harvard, BU, NEU) rises big from the river over a strip of its school colour, cheers, blinks, then drops to its lane on the riverbank. `/api/state` reports who is on stage as `introducing` (beats in `INTRO_BEATS`, `src/scenes.js`) |
 | `countdown` | 3 s (0-10) | Soft 3, 2, 1 while the challengers wait on the riverbank |
 | `running` | until a lane reaches the top | The climb: lanes MIT, Harvard, gap, BU, NEU; cheers are only accepted now |
 | `finished` | until Start / Stop | Winner announcement; the winner becomes the new king |
@@ -138,12 +138,12 @@ npx wrangler deploy
 
 | Method | Path | Auth | Body / notes |
 | --- | --- | --- | --- |
-| GET | `/api/state` | none | race state + per-school progress (0..8), plus `phaseStartedAt`, `phaseEndsAt`, `serverTime` (sync countdowns to this, not the phone clock), `champion` (`null` = Duck King), `config` |
+| GET | `/api/state` | none | race state + per-school progress (0..8), plus `phaseStartedAt`, `phaseEndsAt`, `serverTime` (sync countdowns to this, not the phone clock), `champion` (`null` = Duck King), `introducing` (school on stage during the intro, else `null`), `config` |
 | POST | `/api/cheer` | none, rate-limited per IP+school | `{"school": "mit"\|"harvard"\|"bu"\|"neu"}`; `429` with `reason: "not running"` outside `running` |
 | POST | `/api/admin/start` | `X-Admin-Key` header | resets cheers, starts `intro` -> `countdown` -> `running` |
 | POST | `/api/admin/stop` | `X-Admin-Key` header | back to `idle` (the reign) from any status; the champion keeps the crown |
 | POST | `/api/admin/reset` | `X-Admin-Key` header | full wipe, crown back to the Duck King; timing config is kept |
-| POST | `/api/admin/config` | `X-Admin-Key` header | `{"introSeconds": 8-30, "countdownSeconds": 0-10}`, applies from the next Start; `400` if out of range |
+| POST | `/api/admin/config` | `X-Admin-Key` header | `{"introSeconds": 14-45, "countdownSeconds": 0-10}`, applies from the next Start; `400` if out of range |
 | POST | `/api/admin/rotate-instance` | `X-Admin-Key` header | mints a new sim instance with `SIM_PASSWORD`, adopts it |
 
 ## Tuning

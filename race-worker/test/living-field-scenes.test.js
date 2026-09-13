@@ -75,3 +75,14 @@ test("centeredMascotFrame draws every mascot as a well-formed, non-empty 17x9 gr
   }
   assert.throws(() => centeredMascotFrame("not-a-mascot"), /unknown mascot/);
 });
+
+test("centeredMascotFrame(id, 5) draws the small debug art for every mascot", () => {
+  for (const id of Object.keys(MASCOTS)) {
+    const grid = centeredMascotFrame(id, 5);
+    assertValidGrid(grid);
+    const lit = grid.flat().filter((px) => px[0] > 12 || px[1] > 16 || px[2] > 26);
+    assert.ok(lit.length > 5, `${id}'s 5x5 preview frame looks empty`);
+    // smaller sprite, so fewer lit pixels than the 9x9 preview of the same mascot
+    assert.ok(lit.length < centeredMascotFrame(id).flat().filter((px) => px[0] > 12 || px[1] > 16 || px[2] > 26).length);
+  }
+});

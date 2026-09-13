@@ -332,7 +332,12 @@
     const king = state.champion ? MASCOTS[state.champion] : null;
     const kingName = king ? king.name : "The Duck King";
     if (state.status === "idle") bannerEl.textContent = `👑 ${kingName} rules the Charles. Waiting for the race…`;
-    else if (state.status === "intro") bannerEl.textContent = `👑 ${kingName} is giving up the crown…`;
+    else if (state.status === "intro") {
+      const challenger = state.introducing ? MASCOTS[state.introducing] : null;
+      bannerEl.textContent = challenger
+        ? `Introducing ${challenger.name} for ${challenger.school}!`
+        : `👑 ${kingName} is giving up the crown…`;
+    }
     else if (state.status === "countdown") bannerEl.textContent = `Get ready… ${secondsLeft}`;
     else if (state.status === "running") bannerEl.textContent = "Race is on — cheer!";
     else if (state.status === "finished") {

@@ -8,11 +8,15 @@
 import { COLS, OFF, ROWS } from "./render.js";
 import { MASCOTS, blank, blit } from "./sprites.js";
 
-/** 17x9 grid with `id`'s idle pose (9x9) centred on the facade. Throws for an unknown id. */
-export function centeredMascotFrame(id) {
+/** 17x9 grid with `id`'s idle pose centred on the facade. `size` picks the 9x9 sprite (the
+ * default) or the 5x5 one (`sprite5`/`poses5` in sprites.js). Throws for an unknown id, or
+ * for a mascot with no 5x5 art if `size` is 5. */
+export function centeredMascotFrame(id, size = 9) {
   const mascot = MASCOTS[id];
   if (!mascot) throw new Error(`unknown mascot: ${id}`);
-  const sprite = mascot.poses.idle;
+  const poses = size === 5 ? mascot.poses5 : mascot.poses;
+  if (!poses) throw new Error(`${id} has no ${size}x${size} art`);
+  const sprite = poses.idle;
   const grid = blank(ROWS, COLS, OFF);
   const top = Math.floor((ROWS - sprite.length) / 2);
   const left = Math.floor((COLS - sprite[0].length) / 2);

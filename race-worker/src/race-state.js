@@ -3,7 +3,7 @@ import { LANE_COLS } from "./render.js";
 import { SCHOOLS, SCHOOL_INFO, isSchool } from "./mascots.js";
 import { centeredMascotFrame } from "./mascot-preview.js";
 import { packFrame, FINISH_COLUMNS } from "./render.js";
-import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, validateSceneConfig } from "./scenes.js";
+import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, introducingAt, validateSceneConfig } from "./scenes.js";
 import { FlashGuard } from "./safety.js";
 import { GOLD, MASCOTS } from "./sprites.js";
 import { LIVING_FIELD_SCENES } from "./living-field-scenes.js";
@@ -89,6 +89,9 @@ export class RaceState extends DurableObject {
       phaseEndsAt: this.state_.phaseEndsAt,
       serverTime: Date.now(),
       champion: this.state_.champion,
+      // school being introduced right now during the intro, so the site can name it
+      introducing:
+        this.state_.status === "intro" ? introducingAt(Date.now() - this.state_.phaseStartedAt, this.state_.config) : null,
       config: this.state_.config,
       hasInstance: Boolean(this.state_.instance),
     };
@@ -237,12 +240,13 @@ export class RaceState extends DurableObject {
     }
   }
 
-  /** Admin-only: push one mascot's idle sprite, centred, straight to the building. */
-  async previewMascot(id) {
+  /** Admin-only: push one mascot's idle sprite, centred, straight to the building.
+   * `size` is 9 (the default, full sprite) or 5 (the small debug art in sprites.js). */
+  async previewMascot(id, size = 9) {
     if (!MASCOTS[id]) throw new Error(`unknown mascot: ${id}`);
     if (this.state_.status !== "idle") return { ok: false, reason: "race must be idle to preview" };
     if (!this.state_.instance) return { ok: false, reason: "no sim instance configured" };
-    const grid = centeredMascotFrame(id);
+    const grid = centeredMascotFrame(id, size);
     await this.withReignPaused(() => this.streamPreview(() => grid, MASCOT_PREVIEW_SECONDS));
     return { ok: true };
   }
