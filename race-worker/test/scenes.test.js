@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { COLS, LANE_COLS, OFF, ROWS, buildFrame, climbTop } from "../src/render.js";
 import { FlashGuard, GUARD_FLASHES_PER_SECOND, MAX_FLASHES_PER_SECOND, worstFlashRate } from "../src/safety.js";
 import {
+  DEFAULT_SCENE_CONFIG,
   countdownFrame,
   frameFor,
   introFrame,
@@ -13,6 +14,8 @@ import {
   validateSceneConfig,
 } from "../src/scenes.js";
 import { showSequence } from "../scripts/sequence.js";
+import { WIN_CELEBRATION_MS, winCelebrationFrame } from "../src/win-celebration.js";
+import { SCHOOLS } from "../src/mascots.js";
 
 const FPS = 15;
 
@@ -107,6 +110,21 @@ test("the guard stops a 10 Hz strobe", () => {
   const guard = new FlashGuard();
   const safe = strobe.map((grid, i) => guard.filter(grid, (i * 1000) / 30));
   assert.ok(worstFlashRate(safe, 30).rate <= GUARD_FLASHES_PER_SECOND);
+});
+
+test("frameFor plays the win celebration while it's live, then settles onto the static frame", () => {
+  const progressCols = Object.fromEntries(SCHOOLS.map((s) => [s, 8]));
+  const base = { champion: null, config: DEFAULT_SCENE_CONFIG, phaseStartedAt: 0, winner: "mit", progressCols };
+  // mid-celebration: matches winCelebrationFrame directly
+  assert.deepEqual(
+    frameFor({ ...base, status: "finished", celebrationEndsAt: WIN_CELEBRATION_MS }, 5000),
+    winCelebrationFrame(5000, { winner: "mit", progressCols }),
+  );
+  // celebration over: falls back to the plain static finish frame
+  assert.deepEqual(
+    frameFor({ ...base, status: "finished", celebrationEndsAt: WIN_CELEBRATION_MS }, WIN_CELEBRATION_MS + 1),
+    buildFrame({ progressCols, status: "finished", winner: "mit" }),
+  );
 });
 
 test("the whole show, including a full climb, is flash-safe", () => {

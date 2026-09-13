@@ -21,6 +21,7 @@ import {
   softenColor,
 } from "./render.js";
 import { CROWN, DIGITS, GOLD, MASCOTS, MASCOT_FOR_SCHOOL, blank, blit, drawLaneMascot, mix } from "./sprites.js";
+import { winCelebrationFrame } from "./win-celebration.js";
 
 export const DEFAULT_SCENE_CONFIG = { introSeconds: 22, countdownSeconds: 3 };
 // Shorter than ~14 s and the beats (especially the four introductions) blur together.
@@ -199,6 +200,15 @@ export function raceStartFrame() {
   return buildFrame({ progressCols: Object.fromEntries(SCHOOLS.map((s) => [s, 0])), status: "running", winner: null });
 }
 
+/** Whether the building should keep repainting on its own clock right now, vs. holding a
+ * static frame: the idle reign forever, intro/countdown for their bounded phase, and
+ * "finished" only for the bounded window right after a win. */
+export function isAnimating(state, now) {
+  if (ANIMATED_STATUSES.includes(state.status)) return true;
+  if (state.status === "finished") return Boolean(state.celebrationEndsAt) && now < state.celebrationEndsAt;
+  return false;
+}
+
 /** Whatever the building should show for `state` at `now` (ms since epoch). */
 export function frameFor(state, now) {
   const t = Math.max(0, now - (state.phaseStartedAt ?? now));
@@ -210,7 +220,11 @@ export function frameFor(state, now) {
       return introFrame(t, { ...config, champion: state.champion });
     case "countdown":
       return countdownFrame(t, config);
-    default:
+    case "finished":
+      return state.celebrationEndsAt && now < state.celebrationEndsAt
+        ? winCelebrationFrame(t, { winner: state.winner, progressCols: state.progressCols })
+        : buildFrame(state);
+    default: // "running"
       return buildFrame(state);
   }
 }

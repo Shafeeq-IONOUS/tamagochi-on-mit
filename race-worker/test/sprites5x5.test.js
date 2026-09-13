@@ -33,6 +33,18 @@ test("every 5x5 sprite has at least one eye and keeps its mouth/beak", () => {
   }
 });
 
+// Every mascot but the duck is a symmetric front-facing face and should show both eyes — a
+// "keeps at least one" check alone let a one-eyed John Harvard ship (the mouth had silently
+// taken the second eye's spot). The duck's 5x5 is a deliberate side profile with its bill
+// jutting to one side, so one eye is correct there, not a bug.
+test("every symmetric-faced mascot's 5x5 shows both eyes", () => {
+  for (const [id, m] of Object.entries(MASCOTS)) {
+    if (id === "duck") continue;
+    const eyeCount = m.sprite5.reduce((n, row) => n + [...row].filter((ch) => ch === "E").length, 0);
+    assert.equal(eyeCount, 2, `${id}: 5x5 sprite has ${eyeCount} eye(s), expected 2`);
+  }
+});
+
 test("5x5 poses (idle/blink/eat/sleep) are derived and stay well-formed", () => {
   for (const [id, m] of Object.entries(MASCOTS)) {
     assert.ok(m.poses5, `${id}: poses5 is missing`);
