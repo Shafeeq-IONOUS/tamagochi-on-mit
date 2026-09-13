@@ -3,360 +3,150 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-<title>Green Building Race</title>
+<meta name="theme-color" content="#070b14">
+<title>King of the Charles</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Karla:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root{
-    --night: #0a0d16;
-    --slate: #161c2b;
-    --slate-2: #1d2438;
-    --brass: #c9a668;
-    --paper: #eef1f6;
-    --muted: #8a93ab;
-    --mit: #a31f34;
-    --harvard: #8a2be2;
-    --bu: #cc0000;
-    --neu: #f4f4f4;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0;
-    min-height:100vh;
-    background:
-      radial-gradient(ellipse 900px 500px at 50% -10%, #2a1f4022, transparent 60%),
-      var(--night);
-    color:var(--paper);
-    font-family:'Karla',-apple-system,BlinkMacSystemFont,sans-serif;
-    padding:24px 16px 56px;
-  }
-  .wrap{max-width:600px;margin:0 auto;}
-
-  header{text-align:center;margin-bottom:22px;}
-  .kicker{
-    font-family:'Press Start 2P',monospace;
-    font-size:9px;
-    letter-spacing:.08em;
-    color:var(--brass);
-    margin:0 0 12px;
-  }
-  h1{
-    font-family:'Press Start 2P',monospace;
-    font-size:clamp(1.1rem,5.5vw,1.6rem);
-    line-height:1.6;
-    margin:0 0 10px;
-    text-wrap:balance;
-  }
-  .sub{color:var(--muted);font-size:14px;margin:0;}
-
-  #status-banner{
-    text-align:center;
-    padding:12px 16px;
-    border-radius:10px;
-    background:var(--slate);
-    border:1px solid #ffffff1a;
-    margin-bottom:20px;
-    font-weight:700;
-    font-size:15px;
-    transition:background .3s, border-color .3s;
-  }
-  #status-banner.finished{
-    background:#2a2210;
-    border-color:var(--brass);
-    color:var(--brass);
-    animation:glow 1.6s ease-in-out infinite;
-  }
-  @keyframes glow{
-    0%,100%{box-shadow:0 0 0 rgba(201,166,104,0);}
-    50%{box-shadow:0 0 18px rgba(201,166,104,.5);}
-  }
-
-  .lanes{display:flex;flex-direction:column;gap:14px;}
-  .lane{
-    background:var(--slate);
-    border-radius:14px;
-    padding:14px 16px 16px;
-    border:1px solid #ffffff14;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-  }
-  .lane.winner{border-color:var(--school-color, var(--brass));box-shadow:0 0 0 1px var(--school-color, var(--brass));}
-
-  .lane-head{display:flex;align-items:center;gap:12px;}
-  .sprite-box{
-    position:relative;
-    flex:none;
-    width:54px;height:54px;
-    border-radius:8px;
-    background:#00000033;
-    display:flex;align-items:center;justify-content:center;
-  }
-  canvas.sprite{image-rendering:pixelated;width:48px;height:48px;}
-  .lane-names{flex:1;min-width:0;}
-  .lane-names .school{font-weight:700;font-size:16px;}
-  .lane-names .mascot{color:var(--muted);font-size:12.5px;}
-
-  .track{display:flex;gap:3px;}
-  .cell{
-    flex:1;
-    aspect-ratio:1;
-    border-radius:3px;
-    background:#00000055;
-    transition:background .25s;
-  }
-
-  button.cheer{
-    width:100%;
-    padding:14px;
-    border:none;
-    border-radius:10px;
-    font-size:15px;
-    font-weight:700;
-    color:var(--night);
-    cursor:pointer;
-    -webkit-tap-highlight-color:transparent;
-    user-select:none;
-    position:relative;
-    overflow:visible;
-    transition:transform .08s ease-out, filter .15s;
-  }
-  button.cheer:active{transform:scale(.96);filter:brightness(1.15);}
-  button.cheer:disabled{opacity:.35;cursor:default;}
-
-  .particle{
-    position:absolute;
-    top:6px;left:50%;
-    width:8px;height:8px;
-    border-radius:2px;
-    pointer-events:none;
-    animation:pop .7s ease-out forwards;
-  }
-  @keyframes pop{
-    0%{transform:translate(-50%,0) scale(1);opacity:1;}
-    100%{transform:translate(var(--dx),-46px) scale(.4);opacity:0;}
-  }
-  @media (prefers-reduced-motion: reduce){
-    .particle{display:none;}
-    #status-banner.finished{animation:none;}
-  }
-
-  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:32px;}
-  footer a{color:var(--brass);}
+:root{--night:#070b14;--sky:#0d1730;--slate:#151d30;--slate2:#202a42;--brass:#d7ad51;--gold:#ffd866;--paper:#f4f2e9;--muted:#a8b2c8;--river:#112f58;--mit:#a31f34;--harvard:#a51c30;--bu:#c00;--neu:#f4f4f4}
+*{box-sizing:border-box}html{background:var(--night)}body{margin:0;min-height:100vh;color:var(--paper);font-family:'Karla',sans-serif;padding:22px 14px 48px;overflow-x:hidden;background:radial-gradient(ellipse 800px 420px at 50% -10%,#49335a38,transparent 66%),var(--night)}
+.wrap{width:100%;max-width:620px;margin:auto}header{text-align:center;margin-bottom:16px}.kicker{font:8px 'Press Start 2P';letter-spacing:.08em;color:var(--brass);margin:0 0 12px}h1{font:clamp(1.15rem,6vw,1.75rem)/1.5 'Press Start 2P';margin:0 0 7px;text-wrap:balance}.sub{color:var(--muted);font-size:14px;margin:0}
+#story-stage{position:relative;width:100%;aspect-ratio:5/4;min-height:290px;max-height:480px;overflow:hidden;border:1px solid #d7ad5155;border-radius:17px;background:var(--sky);box-shadow:0 18px 45px #0008,inset 0 0 0 3px #ffffff08;transition:max-height .55s,aspect-ratio .55s,border-color .3s}
+.stars{position:absolute;inset:0 0 34%;opacity:.8;background-image:radial-gradient(circle,#fff 0 1px,transparent 1.5px);background-size:37px 31px}.moon{position:absolute;right:9%;top:9%;width:26px;height:26px;border-radius:50%;background:#e9e4c5;box-shadow:0 0 18px #fff5}.moon:after{content:'';position:absolute;left:-6px;top:-2px;width:25px;height:25px;border-radius:50%;background:var(--sky)}
+.building{position:absolute;left:50%;bottom:22%;width:38%;height:66%;transform:translateX(-50%);background:#111827;border:3px solid #23304a;border-bottom:0}.building:before{content:'';position:absolute;inset:7px;background:repeating-linear-gradient(90deg,transparent 0 12%,#ffc94d2c 12% 17%),repeating-linear-gradient(0deg,transparent 0 8%,#ffc94d27 8% 12%)}.building:after{content:'GREEN';position:absolute;top:42%;left:50%;transform:translateX(-50%);font:7px 'Press Start 2P';letter-spacing:.1em;color:#66728b}
+.skyline{position:absolute;inset:auto 0 21%;height:17%;opacity:.9;background:linear-gradient(90deg,#111827 0 8%,transparent 8% 10%,#111827 10% 19%,transparent 19% 21%,#111827 21% 30%,transparent 30% 68%,#111827 68% 76%,transparent 76% 78%,#111827 78%)}.river{position:absolute;inset:auto 0 0;height:23%;background:linear-gradient(#183e6a,var(--river))}.river:before,.river:after{content:'';position:absolute;left:-10%;width:120%;height:3px;background:repeating-linear-gradient(90deg,transparent 0 16px,#68a6cc88 16px 31px,transparent 31px 54px);animation:ripple 5s linear infinite}.river:before{top:28%}.river:after{top:68%;animation-duration:7s;animation-direction:reverse;opacity:.6}@keyframes ripple{to{transform:translateX(54px)}}
+.crown{position:absolute;z-index:5;left:50%;top:18%;width:54px;height:37px;transform:translate(-50%,-50%);opacity:0;transition:all .7s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 3px 0 #714c13)}.crown:before{content:'';position:absolute;left:4px;right:4px;bottom:3px;height:19px;background:var(--gold);clip-path:polygon(0 0,23% 50%,48% 0,72% 50%,100% 0,91% 100%,9% 100%)}.crown:after{content:'';position:absolute;left:8px;right:8px;bottom:0;height:7px;background:#e6a722;box-shadow:0 -3px #fff2a055}.gem{position:absolute;z-index:1;left:24px;bottom:7px;width:7px;height:7px;background:#cb3045}.finish-line{position:absolute;z-index:4;left:11%;right:11%;top:16%;height:7px;opacity:0;transform:scaleX(.25);background:repeating-linear-gradient(90deg,var(--gold) 0 14px,#aa7118 14px 20px);box-shadow:0 0 13px #ffd86699;transition:.6s}
+.actor{position:absolute;z-index:6;width:90px;text-align:center;opacity:0;transition:opacity .55s,transform .75s,left .75s,top .75s;transform:translate(-50%,-50%) scale(.75)}.actor canvas{display:block;width:82px;height:82px;margin:auto;image-rendering:pixelated}.actor-label{display:block;font:7px/1.5 'Press Start 2P';text-transform:uppercase;text-shadow:0 2px 2px #000}#story-king{left:50%;top:48%}
+.ducklings{position:absolute;z-index:7;left:50%;top:65%;width:145px;height:45px;transform:translateX(-50%);opacity:0;transition:opacity .5s,transform .7s}.duckling{position:absolute;width:36px;height:36px;image-rendering:pixelated;animation:waddle 1.5s ease-in-out infinite}.duckling:nth-child(1){left:0;top:5px}.duckling:nth-child(2){left:54px;top:10px;animation-delay:.3s}.duckling:nth-child(3){right:0;top:2px;animation-delay:.55s}@keyframes waddle{50%{transform:translateY(-3px) rotate(2deg)}}@keyframes bob{50%{transform:translate(-50%,-54%)}}
+.challenger{top:62%}.challenger[data-school=mit]{left:15%}.challenger[data-school=harvard]{left:38%}.challenger[data-school=bu]{left:62%}.challenger[data-school=neu]{left:85%}.challenger canvas{width:62px;height:62px}.challenger .actor-label{font-size:6px}.challenger.spotlight{opacity:1!important;top:50%;left:50%!important;transform:translate(-50%,-50%) scale(1.45)!important;filter:drop-shadow(0 0 14px var(--school-color))}.challenger.dimmed{opacity:.15!important}
+.story-copy{position:absolute;z-index:10;left:12px;right:12px;bottom:13px;min-height:67px;padding:10px 12px;text-align:center;border:1px solid #ffffff22;background:#070b14e8;box-shadow:0 5px 0 #0008}#story-title{font:clamp(9px,2.9vw,12px)/1.6 'Press Start 2P';text-transform:uppercase;margin:0;text-wrap:balance}#story-detail{font-size:13px;line-height:1.25;color:var(--muted);margin:4px 0 0}.decree{position:absolute;z-index:9;left:50%;top:46%;width:63%;padding:15px 10px;transform:translate(-50%,-50%) rotate(-1deg);text-align:center;background:#e9d8ae;color:#291e14;border:3px double #7f5e2c;box-shadow:7px 8px #0007;opacity:0;transition:.45s}.decree strong{font:8px/1.8 'Press Start 2P';display:block}.decree span{font-size:13px;font-weight:700}.countdown-digit{position:absolute;z-index:9;left:50%;top:45%;transform:translate(-50%,-50%) scale(.7);font:clamp(84px,29vw,150px)/1 'Press Start 2P';text-shadow:7px 7px #000,0 0 24px #fff4;opacity:0;transition:.18s}.confetti{position:absolute;z-index:8;inset:0;pointer-events:none;opacity:0}.confetti i{position:absolute;width:7px;height:11px;background:var(--gold);animation:fall 2.5s linear infinite}.confetti i:nth-child(1){left:18%}.confetti i:nth-child(2){left:31%;background:#d84c65;animation-delay:-1.4s}.confetti i:nth-child(3){left:66%;background:#69a5ca;animation-delay:-.8s}.confetti i:nth-child(4){left:81%;animation-delay:-1.9s}@keyframes fall{from{transform:translateY(-20px)}to{transform:translateY(340px) rotate(270deg)}}
+#story-stage[data-mode=idle] #story-king,#story-stage[data-scene=reign] .crown{opacity:1}#story-stage[data-scene=reign] #story-king{animation:bob 2.5s ease-in-out infinite}#story-stage[data-scene=ducklings] #story-king,#story-stage[data-scene=leave] #story-king{opacity:1;left:43%}#story-stage[data-scene=ducklings] .ducklings,#story-stage[data-scene=leave] .ducklings{opacity:1}#story-stage[data-scene=ducklings] .crown,#story-stage[data-scene=leave] .crown{opacity:1;left:43%}#story-stage[data-scene=decree] .decree{opacity:1}#story-stage[data-scene=open] .crown,#story-stage[data-scene=challenge] .crown{opacity:1;top:27%;transform:translate(-50%,-50%) scale(1.35)}#story-stage[data-scene=open] #story-king{opacity:.9;left:88%;top:69%;transform:translate(-50%,-50%) scale(.52)}#story-stage[data-scene=open] .ducklings{opacity:.9;left:89%;top:76%;transform:translateX(-50%) scale(.58)}#story-stage[data-scene=challengers] .challenger,#story-stage[data-scene=challenge] .challenger{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#story-stage[data-mode=intro] #story-king,#story-stage[data-mode=intro] .crown{opacity:1}#story-stage[data-mode=intro][data-scene=abdicate] #story-king{top:57%;transform:translate(-50%,-50%) rotate(6deg)}#story-stage[data-mode=intro][data-scene=crown-rise] .crown{top:14%;transform:translate(-50%,-50%) scale(1.1)}#story-stage[data-mode=intro][data-scene=crown-rise] #story-king{top:56%}#story-stage[data-mode=intro][data-scene=depart] #story-king{left:-12%;opacity:0}#story-stage[data-mode=intro][data-scene=depart] .ducklings{opacity:1;left:-15%}#story-stage[data-mode=intro][data-scene=introducing] .finish-line,#story-stage[data-mode=countdown] .finish-line{opacity:1;transform:scaleX(1)}#story-stage[data-mode=intro][data-scene=introducing] .crown{opacity:0}
+#story-stage[data-mode=countdown] .challenger{opacity:1;top:70%;transform:translate(-50%,-50%) scale(.85)}#story-stage[data-mode=countdown] .countdown-digit{opacity:1;transform:translate(-50%,-50%) scale(1)}#story-stage[data-mode=countdown].final-second .finish-line{background:var(--gold);box-shadow:0 0 24px #ffd866}
+#story-stage[data-mode=running]{aspect-ratio:auto;max-height:94px;border-color:#ffffff18}#story-stage[data-mode=running]>:not(.story-copy){opacity:0!important}#story-stage[data-mode=running] .story-copy{top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;border:0;background:linear-gradient(90deg,var(--slate),var(--slate2))}
+#story-stage[data-mode=finished] #story-king{opacity:1;top:47%;transform:translate(-50%,-50%) scale(1.45)}#story-stage[data-mode=finished] .crown{opacity:1;top:24%;transform:translate(-50%,-50%) scale(1.2);animation:crownDrop .8s ease-out both}#story-stage[data-mode=finished] .confetti{opacity:1}@keyframes crownDrop{from{transform:translate(-50%,-130%) scale(1.2)}}
+#status-banner{text-align:center;padding:11px 14px;border-radius:0 0 10px 10px;background:#101728;border:1px solid #ffffff14;border-top:0;margin:0 8px 18px;font-weight:700;font-size:14px;color:var(--muted)}#status-banner strong{color:var(--paper)}#status-banner.finished{color:var(--brass)}.lanes{display:flex;flex-direction:column;gap:12px}.lane{background:var(--slate);border-radius:13px;padding:12px 14px 14px;border:1px solid #ffffff14;display:flex;flex-direction:column;gap:9px}.lane.winner{border-color:var(--school-color,var(--brass));box-shadow:0 0 0 1px var(--school-color,var(--brass)),0 0 24px #d7ad5122}.lane-head{display:flex;align-items:center;gap:11px}.sprite-box{flex:none;width:50px;height:50px;border-radius:7px;background:#0004;display:flex;align-items:center;justify-content:center}canvas.sprite{image-rendering:pixelated;width:44px;height:44px}.lane-names{flex:1}.lane-names .school{font-weight:700;font-size:16px}.lane-names .mascot{color:var(--muted);font-size:12px}.track{display:flex;gap:3px}.cell{flex:1;aspect-ratio:1;border-radius:2px;background:#0006;transition:background .2s}button.cheer{width:100%;padding:13px;border:0;border-radius:9px;font-size:15px;font-weight:700;color:var(--night);cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none;position:relative;transition:transform .08s,filter .15s}button.cheer:active{transform:scale(.97);filter:brightness(1.15)}button.cheer:disabled{opacity:.3;cursor:default}.particle{position:absolute;top:6px;left:50%;width:8px;height:8px;pointer-events:none;animation:pop .7s ease-out forwards}@keyframes pop{to{transform:translate(var(--dx),-46px) scale(.4);opacity:0}}footer{text-align:center;color:var(--muted);font-size:12px;margin-top:29px}footer a{color:var(--brass)}
+@media(min-width:560px){#story-stage{aspect-ratio:16/10}.story-copy{left:22px;right:22px}.challenger canvas{width:70px;height:70px}.challenger .actor-label{font-size:7px}}@media(max-width:350px){body{padding-left:9px;padding-right:9px}.actor{width:72px}.challenger canvas{width:51px;height:51px}.challenger .actor-label{font-size:5px}.story-copy{left:8px;right:8px}#story-title{font-size:8px}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition-duration:.01ms!important}.particle,.confetti{display:none}}
+#story-stage:not(.duck-reign)[data-mode=intro][data-scene=depart] .ducklings{opacity:0}
+#story-stage[data-mode=intro][data-scene=crown-melt] .finish-line,#story-stage[data-mode=intro][data-scene=lineup] .finish-line{opacity:1;transform:scaleX(1)}
+#story-stage[data-mode=intro][data-scene=crown-melt] .crown,#story-stage[data-mode=intro][data-scene=lineup] .crown{opacity:0}
+#story-stage[data-mode=intro][data-scene=lineup] .challenger{opacity:1;transform:translate(-50%,-50%) scale(1)}
 </style>
 </head>
-<body>
-  <div class="wrap">
-    <header>
-      <p class="kicker">SUNDAI &middot; GREEN BUILDING</p>
-      <h1>Race up the<br>Green Building</h1>
-      <p class="sub">Cheer for your school &mdash; every cheer pushes your mascot up a floor.</p>
-    </header>
-    <div id="status-banner">Waiting for the race to start&hellip;</div>
-    <div class="lanes" id="lanes"></div>
-    <footer>Watch it live on the building, or at <a href="https://sundai.willsarg.com">the simulator</a>.</footer>
-  </div>
+<body><main class="wrap">
+<header><p class="kicker">SUNDAI &middot; GREEN BUILDING</p><h1>KING OF THE CHARLES</h1><p class="sub">A mascot race up the Green Building.</p></header>
+<section id="story-stage" data-mode="idle" data-scene="reign" aria-live="polite" aria-labelledby="story-title">
+<div class="stars"></div><div class="moon"></div><div class="skyline"></div><div class="building"></div><div class="river"></div><div class="finish-line"></div><div class="crown"><i class="gem"></i></div>
+<div class="actor" id="story-king"><canvas width="81" height="81"></canvas><span class="actor-label"></span></div>
+<div class="ducklings" aria-hidden="true"><canvas class="duckling" width="36" height="36"></canvas><canvas class="duckling" width="36" height="36"></canvas><canvas class="duckling" width="36" height="36"></canvas></div>
+<div id="story-challengers"></div><div class="decree"><strong>Royal decree</strong><span>The Duck King is officially<br>ON PARENTAL LEAVE</span></div><div class="countdown-digit" id="countdown-digit">3</div><div class="confetti"><i></i><i></i><i></i><i></i></div>
+<div class="story-copy"><p id="story-title">THE DUCK KING RULES THE CHARLES</p><p id="story-detail">A peaceful reign. Mostly.</p></div></section>
+<div id="status-banner">The throne is occupied. The race begins soon.</div><section class="lanes" id="lanes" aria-label="Race competitors"></section><footer>Watch it live on the building, or at <a href="https://sundai.willsarg.com">the simulator</a>.</footer>
+</main><script src="config.js"></script><script>
+const COMMON={N:'#ff5078',T:'#bebeb4',Y:'#ffbe00'},WHITE='#fff';
+const MASCOTS={
+mit:{name:'Tim the Beaver',school:'MIT',color:'var(--mit)',sprite:['.B.....B.','.BBBBBBB.','BBEBBBEBB','BBBLNLBBB','.BBTMTBB.','..BBBBB..','.BLLLLLB.','.BLLLLLBK','.BB...BBK'],palette:{B:'#b96923',L:'#ebaa64',K:'#6e370f'},eye:WHITE,lid:'B',closed:'L'},
+harvard:{name:'John Harvard',school:'Harvard',color:'var(--harvard)',sprite:['..HHHHH..','..HHYHH..','HHHHHHHHH','.GLLLLLG.','.GELLLEG.','.GLLMLLG.','..CCCCC..','.KKKKKKK.','.KK...KK.'],palette:{H:'#5a5a8c',G:'#9696a5',L:'#e6aa82',C:'#c8c8be',K:'#be1e37'},eye:'#502814',lid:'L',closed:'L'},
+bu:{name:'Rhett the Terrier',school:'BU',color:'var(--bu)',sprite:['BB.....BB','BBB...BBB','BBBBLBBBB','BEBBLBBEB','BBLLNLLBB','.BLLMLLB.','..KKKKK..','.BBLLLBB.','.BB...BB.'],palette:{B:'#505fc8',L:'#bebebe',K:'#c00'},eye:WHITE,lid:'B',closed:'L'},
+neu:{name:'Paws the Husky',school:'Northeastern',color:'var(--neu)',sprite:['B.......B','BB.....BB','BBBBBBBBB','BLELLLELB','BLLLNLLLB','.LLLMLLL.','..BLLLB..','.BBLLLBB.','.BB...BB.'],palette:{B:'#788296',L:'#b9bec8'},eye:'#5abeff',lid:'L',closed:'L'},
+duck:{name:'The Duck King',school:'',color:'var(--brass)',sprite:['...BBB...','..BBBBB..','..BEBBYY.','..BBBBM..','...BBB...','.BBBBBBB.','BBBBBBBB.','.BBBBBB..','..Y..Y...'],palette:{B:'#c8a00a',Y:'#ff5a00'},eye:'#281e00',lid:'B',closed:'Y'}};
+const SCHOOLS=['mit','harvard','bu','neu'],FINISH_COLS=8,reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function color(ch,m){if(ch==='.')return null;if(ch==='E')return m.eye;if(ch==='M')return m.palette[m.closed];return m.palette[ch]??COMMON[ch]??null}function drawSprite(canvas,m,blink=false){const x=canvas.getContext('2d'),n=m.sprite.length,s=canvas.width/n;x.clearRect(0,0,canvas.width,canvas.height);m.sprite.forEach((row,r)=>[...row].forEach((ch,c)=>{const f=color(blink&&ch==='E'?m.lid:ch,m);if(f){x.fillStyle=f;x.fillRect(c*s,r*s,s+.5,s+.5)}}))}function blink(canvas,m){if(reduceMotion)return;setTimeout(()=>{drawSprite(canvas,m,true);setTimeout(()=>drawSprite(canvas,m),130);blink(canvas,m)},2600+Math.random()*3200)}
+const stage=document.querySelector('#story-stage'),title=document.querySelector('#story-title'),detail=document.querySelector('#story-detail'),banner=document.querySelector('#status-banner'),lanes=document.querySelector('#lanes'),king=document.querySelector('#story-king'),kingCanvas=king.querySelector('canvas');drawSprite(kingCanvas,MASCOTS.duck);blink(kingCanvas,MASCOTS.duck);document.querySelectorAll('.duckling').forEach(c=>drawSprite(c,MASCOTS.duck));
+SCHOOLS.forEach(id=>{const m=MASCOTS[id],actor=document.createElement('div');actor.className='actor challenger';actor.dataset.school=id;actor.style.setProperty('--school-color',m.color);actor.innerHTML=`<canvas width="81" height="81"></canvas><span class="actor-label">${m.school}</span>`;document.querySelector('#story-challengers').append(actor);drawSprite(actor.querySelector('canvas'),m);blink(actor.querySelector('canvas'),m);const lane=document.createElement('article');lane.className='lane';lane.id=`lane-${id}`;lane.style.setProperty('--school-color',m.color);lane.innerHTML=`<div class="lane-head"><div class="sprite-box"><canvas class="sprite" id="sprite-${id}" width="36" height="36"></canvas></div><div class="lane-names"><div class="school">${m.school}</div><div class="mascot">${m.name}</div></div></div><div class="track" id="track-${id}" aria-label="${m.school} race progress"></div><button class="cheer" id="btn-${id}" style="background:${m.color}">Cheer for ${m.school}</button>`;lanes.append(lane);const track=document.querySelector(`#track-${id}`);for(let i=0;i<9;i++){const c=document.createElement('span');c.className='cell';track.append(c)}const canvas=document.querySelector(`#sprite-${id}`);drawSprite(canvas,m);blink(canvas,m);document.querySelector(`#btn-${id}`).onclick=e=>{cheer(id);burst(e.currentTarget,m.color)}});
+function burst(button,c){if(reduceMotion)return;for(let i=0;i<6;i++){const p=document.createElement('span');p.className='particle';p.style.background=c;p.style.setProperty('--dx',`${(Math.random()-.5)*60}px`);button.append(p);p.onanimationend=()=>p.remove()}}async function cheer(school){try{await fetch(`${API_BASE}/api/cheer`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({school})})}catch{}}function story(scene,a,b=''){stage.dataset.scene=scene;title.textContent=a;detail.textContent=b}function setKing(id){const m=MASCOTS[id]||MASCOTS.duck;drawSprite(kingCanvas,m);king.querySelector('.actor-label').textContent=m.name}
+class StoryController{constructor(){this.status=null;this.timer=null;this.raf=null;this.i=0;this.scenes=[['reign','THE DUCK KING RULES THE CHARLES','A peaceful reign. Mostly.',2400],['ducklings','BUT HIS MAJESTY HAS TINY DUCKLINGS NOW…','quack quack',2600],['leave','THE DUCK KING IS TAKING PARENTAL LEAVE','Even monarchs need family time.',2800],['decree','A ROYAL ANNOUNCEMENT','The throne cannot remain empty.',2200],['open','SO WHO WILL RULE THE CHARLES NEXT?','The crown is up for grabs.',2500],['challengers','FOUR SCHOOLS WILL RACE FOR THE CROWN','MIT · HARVARD · BU · NORTHEASTERN',2700],['challenge','WHO WILL BECOME THE NEXT KING OF THE CHARLES?','The race begins soon.',3000]]}clear(){clearTimeout(this.timer);cancelAnimationFrame(this.raf);this.raf=null;document.querySelectorAll('.challenger').forEach(e=>e.classList.remove('spotlight','dimmed'));stage.classList.remove('final-second')}update(s){if(this.status!==s.status){this.clear();this.status=s.status;stage.dataset.mode=s.status;setKing(s.champion);this.enter(s)}else if(s.status==='intro')this.intro(s);else if(s.status==='countdown')this.countdown(s);else if(s.status==='finished')this.finished(s)}enter(s){if(s.status==='idle'){this.i=0;this.idle()}else if(s.status==='intro')this.intro(s);else if(s.status==='countdown')this.countdown(s);else if(s.status==='running')story('race','THE RACE FOR THE CHARLES IS ON','Cheer for your school. Every cheer pushes your mascot higher.');else if(s.status==='finished')this.finished(s)}idle(){const [a,b,c,d]=this.scenes[this.i];story(a,b,c);this.timer=setTimeout(()=>{this.i=(this.i+1)%this.scenes.length;this.idle()},reduceMotion?Math.max(d,3000):d)}intro(s){const e=Math.max(0,s.serverTime-s.phaseStartedAt),t=(s.config?.introSeconds||22)*1000,r=e/t,m=s.introducing&&MASCOTS[s.introducing];document.querySelectorAll('.challenger').forEach(x=>{x.classList.toggle('spotlight',x.dataset.school===s.introducing);x.classList.toggle('dimmed',!!s.introducing&&x.dataset.school!==s.introducing)});if(m)return story('introducing',`${m.school.toUpperCase()} ENTERS THE CHARLES`,m.name);if(r<.12)story('announcement','A ROYAL ANNOUNCEMENT…',`${(MASCOTS[s.champion]||MASCOTS.duck).name} currently wears the crown.`);else if(r<.22)story('abdicate','HIS MAJESTY BOWS','A reign must end before another begins.');else if(r<.31)story('crown-rise','THE CROWN IS UP FOR GRABS','One race will decide its next wearer.');else if(r<.43)story('depart',s.champion?'THE REIGNING CHAMPION GIVES UP THE CROWN':'THE DUCK KING IS OFF TO PARENTAL LEAVE. 👋',s.champion?'The Charles awaits a new ruler.':'The ducklings are waiting.');else story('introducing','FOUR CHALLENGERS APPROACH','MIT · HARVARD · BU · NORTHEASTERN')}countdown(s){this.offset=s.serverTime-Date.now();this.ends=s.phaseEndsAt;if(!this.raf)this.tick()}tick(){if(this.status!=='countdown')return;const ms=Math.max(0,this.ends-(Date.now()+this.offset)),d=Math.max(1,Math.ceil(ms/1000));document.querySelector('#countdown-digit').textContent=d;stage.classList.toggle('final-second',ms<=1000);story('countdown','THE CROWN IS WAITING.',ms<=1000?'Ready!':'Mascots to your marks.');this.raf=requestAnimationFrame(()=>this.tick())}finished(s){const m=MASCOTS[s.winner];if(!m)return story('coronation','THE RACE IS COMPLETE','A new reign begins.');setKing(s.winner);story('coronation','LONG LIVE THE NEW KING OF THE CHARLES',`${m.name.toUpperCase()} · ${m.school.toUpperCase()} — Their reign lasts until the next race.`)}}const controller=new StoryController();
+function render(s){const running=s.status==='running';SCHOOLS.forEach(id=>{const p=Math.max(0,Math.min(FINISH_COLS,s.progressCols?.[id]??0)),cells=document.querySelectorAll(`#track-${id} .cell`),filled=p>=FINISH_COLS?cells.length:Math.floor(p),frac=p-filled;cells.forEach((c,i)=>{if(i<filled){c.style.background=MASCOTS[id].color;c.style.opacity=1}else if(i===filled&&frac>.1){c.style.background=MASCOTS[id].color;c.style.opacity=.35+frac*.65}else{c.style.background='#0006';c.style.opacity=1}});document.querySelector(`#btn-${id}`).disabled=!running;document.querySelector(`#lane-${id}`).classList.toggle('winner',s.status==='finished'&&s.winner===id)});const k=MASCOTS[s.champion]||MASCOTS.duck,w=MASCOTS[s.winner];banner.classList.toggle('finished',s.status==='finished');if(s.status==='idle')banner.innerHTML=`<strong>${k.name}</strong> rules the Charles. Voting opens when the race begins.`;else if(s.status==='intro')banner.textContent=s.introducing?`Now entering: ${MASCOTS[s.introducing].name}`:'The royal succession ceremony is underway.';else if(s.status==='countdown')banner.textContent='Get ready — cheering opens at the start.';else if(s.status==='running')banner.innerHTML='<strong>Cheering is open.</strong> Tap fast. Every cheer counts.';else if(s.status==='finished')banner.innerHTML=`${w?`<strong>${w.name}</strong> is the new ruler.`:'The race is over.'} Think your school can take the crown? Stay tuned for the next round.`;controller.update(s)}async function poll(){try{const r=await fetch(`${API_BASE}/api/state`);if(!r.ok)throw 0;render(await r.json())}catch{banner.textContent="Can't reach the race server… retrying."}}poll();setInterval(poll,500);
+// A school's reign uses the same crown story, but never borrows the Duck King's family-leave joke.
+controller.enter=function(s){
+  stage.classList.toggle('duck-reign',!s.champion);
+  if(s.status==='idle'){
+    const m=MASCOTS[s.champion];
+    this.scenes=m?[
+      ['reign',`${m.name.toUpperCase()} RULES THE CHARLES`,`${m.school} holds the crown. For now.`,3500],
+      ['open','BUT THE CROWN NEVER RESTS','Their reign lasts until the next race.',3000],
+      ['challengers','FOUR SCHOOLS WILL CHALLENGE THE THRONE','MIT · HARVARD · BU · NORTHEASTERN',3000],
+      ['challenge','WHO WILL BECOME THE NEXT KING OF THE CHARLES?','The next race begins soon.',3500]
+    ]:relaxedDuckScenes;
+    this.i=0;this.idle();
+  }else if(s.status==='intro')this.intro(s);
+  else if(s.status==='countdown')this.countdown(s);
+  else if(s.status==='running')story('race','THE RACE FOR THE CHARLES IS ON','Cheer for your school. Every cheer pushes your mascot higher.');
+  else if(s.status==='finished')this.finished(s);
+};
+// Mirror the Green Building's exact INTRO_BEATS from race-worker/src/scenes.js.
+// Server clock correction keeps this smooth between state polls and lets late arrivals join live.
+const liveCrown=document.querySelector('.crown'),liveFinish=document.querySelector('.finish-line');
+const relaxedDuckScenes=[
+  ['reign','THE DUCK KING RULES THE CHARLES','A peaceful reign. Mostly.',3000],
+  ['ducklings','BUT HIS MAJESTY HAS TINY DUCKLINGS NOW…','quack quack',3200],
+  ['leave','THE DUCK KING IS TAKING PARENTAL LEAVE','Even monarchs need family time.',3500],
+  ['decree','A ROYAL ANNOUNCEMENT','The throne cannot remain empty.',2500],
+  ['open','SO WHO WILL RULE THE CHARLES NEXT?','The crown is up for grabs.',3000],
+  ['challengers','FOUR SCHOOLS WILL RACE FOR THE CROWN','MIT · HARVARD · BU · NORTHEASTERN',3200],
+  ['challenge','WHO WILL BECOME THE NEXT KING OF THE CHARLES?','The race begins soon.',4200]
+];
+const baseClear=controller.clear.bind(controller);
+controller.clear=function(){
+  baseClear();this.liveBeatKey=null;
+  liveCrown.removeAttribute('style');liveFinish.removeAttribute('style');
+  king.removeAttribute('style');
+};
+controller.intro=function(s){
+  this.introState=s;this.introClockOffset=s.serverTime-Date.now();
+  if(!this.raf)this.tickIntro();
+};
+controller.tickIntro=function(){
+  if(this.status!=='intro')return;
+  const s=this.introState;
+  const scale=(s.config?.introSeconds||22)/22;
+  const at=(base)=>base*scale;
+  const elapsed=Math.max(0,Date.now()+this.introClockOffset-s.phaseStartedAt);
+  const progress=(start,end)=>Math.max(0,Math.min(1,(elapsed-at(start))/(at(end)-at(start))));
+  let key,scene,heading,copy,spotlight=null;
 
-<script src="config.js"></script>
-<script>
-  // Pixel mascots ported verbatim from the `mascots` branch
-  // (tamagochi-mascots-python/tamagotchi/mascots.py) so the site matches whatever
-  // shows on the building. Sprite chars: palette keys, E = eye, M = mouth, . = off.
-  const COMMON = { N: "#ff5078", T: "#bebeb4", Y: "#ffbe00" };
-  const WHITE = "#ffffff";
-
-  const MASCOTS = {
-    mit: {
-      name: "Tim the Beaver", school: "MIT", color: "var(--mit)",
-      sprite: [
-        ".B.....B.", ".BBBBBBB.", "BBEBBBEBB", "BBBLNLBBB", ".BBTMTBB.",
-        "..BBBBB..", ".BLLLLLB.", ".BLLLLLBK", ".BB...BBK",
-      ],
-      palette: { B: "#b96923", L: "#ebaa64", K: "#6e370f" },
-      eye: WHITE, lid: "B", closed: "L",
-    },
-    harvard: {
-      name: "John Harvard", school: "Harvard", color: "var(--harvard)",
-      sprite: [
-        "..HHHHH..", "..HHYHH..", "HHHHHHHHH", ".GLLLLLG.", ".GELLLEG.",
-        ".GLLMLLG.", "..CCCCC..", ".KKKKKKK.", ".KK...KK.",
-      ],
-      palette: { H: "#5a5a8c", G: "#9696a5", L: "#e6aa82", C: "#c8c8be", K: "#be1e37" },
-      eye: "#502814", lid: "L", closed: "L",
-    },
-    bu: {
-      name: "Rhett the Terrier", school: "BU", color: "var(--bu)",
-      sprite: [
-        "BB.....BB", "BBB...BBB", "BBBBLBBBB", "BEBBLBBEB", "BBLLNLLBB",
-        ".BLLMLLB.", "..KKKKK..", ".BBLLLBB.", ".BB...BB.",
-      ],
-      palette: { B: "#505fc8", L: "#bebebe", K: "#cc0000" },
-      eye: WHITE, lid: "B", closed: "L",
-    },
-    neu: {
-      name: "Paws the Husky", school: "Northeastern", color: "var(--neu)",
-      sprite: [
-        "B.......B", "BB.....BB", "BBBBBBBBB", "BLELLLELB", "BLLLNLLLB",
-        ".LLLMLLL.", "..BLLLB..", ".BBLLLBB.", ".BB...BB.",
-      ],
-      palette: { B: "#788296", L: "#b9bec8" },
-      eye: "#5abeff", lid: "L", closed: "L",
-    },
-  };
-  const SCHOOLS = ["mit", "harvard", "bu", "neu"];
-  const FINISH_COLS = 8;
-  const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  function resolveColor(ch, m) {
-    if (ch === ".") return null;
-    if (ch === "E") return m.eye;
-    if (ch === "M") return m.palette[m.closed];
-    return m.palette[ch] ?? COMMON[ch] ?? null;
+  liveCrown.style.transition='none';liveFinish.style.transition='none';
+  king.style.transition='none';
+  if(elapsed<at(1500)){
+    key='hold';scene='announcement';heading='A ROYAL ANNOUNCEMENT…';
+    copy=`${(MASCOTS[s.champion]||MASCOTS.duck).name} currently wears the crown.`;
+  }else if(elapsed<at(2500)){
+    const p=progress(1500,2500);key='bow';scene='abdicate';heading='HIS MAJESTY BOWS';copy='A reign must end before another begins.';
+    king.style.top=`${48+p*9}%`;
+  }else if(elapsed<at(4500)){
+    const p=progress(2500,4500);key='rise';scene='crown-rise';heading='THE CROWN RISES';copy='The finish line awaits.';
+    king.style.top='57%';liveCrown.style.top=`${27-p*13}%`;
+  }else if(elapsed<at(5500)){
+    key='shine';scene='crown-rise';heading='THE CROWN IS UP FOR GRABS';copy='One race will decide its next wearer.';
+    liveCrown.style.top='14%';
+  }else if(elapsed<at(6500)){
+    const p=progress(5500,6500);key='melt';scene='crown-melt';heading='THE CROWN BECOMES THE FINISH LINE';copy='First mascot to the top takes the throne.';
+    liveCrown.style.top='14%';liveCrown.style.opacity=String(1-p);
+    liveFinish.style.opacity=String(p);liveFinish.style.transform=`scaleX(${.25+.75*p})`;
+  }else if(elapsed<at(9500)){
+    const p=progress(6500,9500);key='depart';scene='depart';
+    heading=s.champion?'THE REIGNING CHAMPION DEPARTS':'THE DUCK KING IS OFF TO PARENTAL LEAVE. 👋';
+    copy=s.champion?'The Charles awaits a new ruler.':'The ducklings are waiting.';
+    king.style.left=`${50-p*62}%`;king.style.opacity=String(1-p);liveCrown.style.opacity='0';liveFinish.style.opacity='1';liveFinish.style.transform='scaleX(1)';
+  }else{
+    const introLength=at(3000),index=Math.floor((elapsed-at(9500))/introLength);
+    if(index>=0&&index<SCHOOLS.length){
+      spotlight=SCHOOLS[index];const m=MASCOTS[spotlight];key=`challenger-${spotlight}`;scene='introducing';
+      heading=`${m.school.toUpperCase()} ENTERS THE CHARLES`;copy=m.name;
+    }else{key='lineup';scene='lineup';heading='FOUR CHALLENGERS. ONE CROWN.';copy='The race is about to begin.'}
+    liveCrown.style.opacity='0';liveFinish.style.opacity='1';liveFinish.style.transform='scaleX(1)';
   }
-
-  function drawSprite(canvas, mascot, blink) {
-    const ctx = canvas.getContext("2d");
-    const n = mascot.sprite.length;
-    const cell = canvas.width / n;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    mascot.sprite.forEach((row, r) => {
-      [...row].forEach((ch, c) => {
-        const key = blink && ch === "E" ? mascot.lid : ch;
-        const color = resolveColor(key, mascot);
-        if (!color) return;
-        ctx.fillStyle = color;
-        ctx.fillRect(c * cell, r * cell, cell + 0.5, cell + 0.5);
-      });
+  if(this.liveBeatKey!==key){
+    this.liveBeatKey=key;story(scene,heading,copy);
+    document.querySelectorAll('.challenger').forEach(el=>{
+      el.classList.toggle('spotlight',el.dataset.school===spotlight);
+      el.classList.toggle('dimmed',Boolean(spotlight)&&el.dataset.school!==spotlight);
     });
   }
-
-  function scheduleBlink(canvas, mascot) {
-    if (reduceMotion) return;
-    const delay = 2600 + Math.random() * 3200;
-    setTimeout(() => {
-      drawSprite(canvas, mascot, true);
-      setTimeout(() => drawSprite(canvas, mascot, false), 130);
-      scheduleBlink(canvas, mascot);
-    }, delay);
-  }
-
-  const lanesEl = document.getElementById("lanes");
-  const bannerEl = document.getElementById("status-banner");
-
-  SCHOOLS.forEach((id) => {
-    const m = MASCOTS[id];
-    const lane = document.createElement("div");
-    lane.className = "lane";
-    lane.id = `lane-${id}`;
-    lane.style.setProperty("--school-color", m.color);
-    lane.innerHTML = `
-      <div class="lane-head">
-        <div class="sprite-box"><canvas class="sprite" id="sprite-${id}" width="36" height="36"></canvas></div>
-        <div class="lane-names">
-          <div class="school">${m.school}</div>
-          <div class="mascot">${m.name}</div>
-        </div>
-      </div>
-      <div class="track" id="track-${id}"></div>
-      <button class="cheer" id="btn-${id}" style="background:${m.color}">Cheer for ${m.school}</button>
-    `;
-    lanesEl.appendChild(lane);
-
-    const track = document.getElementById(`track-${id}`);
-    for (let i = 0; i < 9; i++) {
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      track.appendChild(cell);
-    }
-
-    const canvas = document.getElementById(`sprite-${id}`);
-    drawSprite(canvas, m, false);
-    scheduleBlink(canvas, m);
-
-    document.getElementById(`btn-${id}`).addEventListener("click", (e) => {
-      cheer(id);
-      burst(e.currentTarget, m.color);
-    });
-  });
-
-  function burst(button, color) {
-    if (reduceMotion) return;
-    for (let i = 0; i < 6; i++) {
-      const p = document.createElement("span");
-      p.className = "particle";
-      p.style.background = color;
-      p.style.setProperty("--dx", `${(Math.random() - 0.5) * 60}px`);
-      p.style.animationDelay = `${Math.random() * 60}ms`;
-      button.appendChild(p);
-      p.addEventListener("animationend", () => p.remove());
-    }
-  }
-
-  async function cheer(school) {
-    try {
-      await fetch(`${API_BASE}/api/cheer`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ school }),
-      });
-    } catch {
-      // network hiccup — next poll resyncs the UI either way
-    }
-  }
-
-  function render(state) {
-    const running = state.status === "running";
-    SCHOOLS.forEach((id) => {
-      const progress = Math.max(0, Math.min(FINISH_COLS, state.progressCols[id] ?? 0));
-      const cells = document.querySelectorAll(`#track-${id} .cell`);
-      // at the win threshold (progress === FINISH_COLS) there's no fraction left over, so
-      // treat it as "all blocks", not floor(progress) blocks plus a bare sliver
-      const filled = progress >= FINISH_COLS ? cells.length : Math.floor(progress);
-      const frac = progress - filled;
-      cells.forEach((cell, i) => {
-        if (i < filled) { cell.style.background = MASCOTS[id].color; cell.style.opacity = 1; }
-        else if (i === filled && frac > 0.1) { cell.style.background = MASCOTS[id].color; cell.style.opacity = 0.35 + frac * 0.65; }
-        else { cell.style.background = "#00000055"; cell.style.opacity = 1; }
-      });
-      document.getElementById(`btn-${id}`).disabled = !running;
-      document.getElementById(`lane-${id}`).classList.toggle("winner", state.status === "finished" && state.winner === id);
-    });
-
-    bannerEl.classList.toggle("finished", state.status === "finished");
-    // phaseEndsAt is server time; correct for this phone's clock drift
-    const secondsLeft = state.phaseEndsAt
-      ? Math.max(0, Math.ceil((state.phaseEndsAt - state.serverTime) / 1000))
-      : 0;
-    const king = state.champion ? MASCOTS[state.champion] : null;
-    const kingName = king ? king.name : "The Duck King";
-    if (state.status === "idle") bannerEl.textContent = `👑 ${kingName} rules the Charles. Waiting for the race…`;
-    else if (state.status === "intro") {
-      const challenger = state.introducing ? MASCOTS[state.introducing] : null;
-      bannerEl.textContent = challenger
-        ? `Introducing ${challenger.name} for ${challenger.school}!`
-        : `👑 ${kingName} is giving up the crown…`;
-    }
-    else if (state.status === "countdown") bannerEl.textContent = `Get ready… ${secondsLeft}`;
-    else if (state.status === "running") bannerEl.textContent = "Race is on — cheer!";
-    else if (state.status === "finished") {
-      const winner = MASCOTS[state.winner];
-      bannerEl.textContent = `🏆 ${winner ? winner.school : state.winner} wins! (${winner?.name})`;
-    }
-  }
-
-  async function poll() {
-    try {
-      const resp = await fetch(`${API_BASE}/api/state`);
-      render(await resp.json());
-    } catch {
-      bannerEl.textContent = "Can't reach the race server… retrying";
-    }
-  }
-
-  poll();
-  setInterval(poll, 500);
-</script>
-</body>
-</html>
+  this.raf=requestAnimationFrame(()=>this.tickIntro());
+};
+// Keep controls inert during the first network round-trip, too.
+document.querySelectorAll('.cheer').forEach(button=>{button.disabled=true});
+</script></body></html>
