@@ -18,7 +18,7 @@
 // the floor of legibility, so there's no room left to crop further for a "baby" stage — adult-
 // only is the only sane choice here.
 
-const WHITE = [205, 205, 205]; // full 255 white blooms into a blob on the lit facade
+export const WHITE = [205, 205, 205]; // full 255 white blooms into a blob on the lit facade
 
 const COMMON = {
   R: [255, 30, 30], // open mouth

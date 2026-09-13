@@ -2,6 +2,7 @@
 import { DEFAULT_SCENE_CONFIG, frameFor } from "../src/scenes.js";
 import { FINISH_COLUMNS } from "../src/render.js";
 import { SCHOOLS } from "../src/mascots.js";
+import { WIN_CELEBRATION_MS } from "../src/win-celebration.js";
 
 // Relative climbing speed per school in the demo race (SCHOOLS order).
 const DEMO_SPEEDS = [1, 0.85, 0.7, 0.9];
@@ -32,7 +33,12 @@ export function showSequence({ champion = null, fps = 15, reignSeconds = 4, conf
   sample("running", raceSeconds, (t) => ({ progressCols: progressAt(t) }));
   const final = progressAt(raceSeconds * 1000);
   const winner = SCHOOLS[DEMO_SPEEDS.indexOf(Math.max(...DEMO_SPEEDS))];
-  sample("finished", 3, () => ({ status: "finished", progressCols: final, winner }));
+  sample("finished", WIN_CELEBRATION_MS / 1000 + 2, () => ({
+    status: "finished",
+    progressCols: final,
+    winner,
+    celebrationEndsAt: WIN_CELEBRATION_MS,
+  }));
   return frames;
 }
 
