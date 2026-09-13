@@ -74,6 +74,7 @@ from living_field.text import Ticker, weather_message
 from living_field.control import Control
 from living_field.demo import Director, SAY_WEATHER_AT
 from living_field.race import Race, CREWS, finale, FINALE
+from living_field.koc import KingOfCharles, SCHOOLS
 from living_field.audio import Audio      # Spotify, if you prefer it
 from living_field.music import Music
 
@@ -241,6 +242,13 @@ def main():
     race = Race()
     race_won_at = None
 
+    # The team's race, running in binam's worker. The admin panel starts it,
+    # the cheer page feeds it, and this watches -- so the music and the
+    # building follow whatever the admin does, without needing their own
+    # buttons or a second race that disagrees with the first.
+    koc = KingOfCharles(enabled=os.environ.get("GB_KOC", "1") != "0")
+    koc_won_at = None
+
     # Words, so a stranger does not have to be told how to read it.
     ticker = Ticker()
     next_message = 20.0
@@ -267,6 +275,7 @@ def main():
     if music.ready and music.tracks:
         music.start()
     crowned = False
+    mirror_matrix = os.environ.get("GB_MATRIX", "0") == "1"
 
     if control.available:
         print(f"touch page: {control.url}   (open it on a phone to grow branches)")
@@ -520,8 +529,34 @@ def main():
             elif ticker.active:
                 ticker.set("")
 
+        # ---- the team's race, if the admin has started one ---------------
+        for ev in koc.take_events():
+            if ev == "started":
+                music.start()          # the Start button starts the music
+                koc_won_at = None
+            elif ev == "stopped":
+                music.stop()
+            elif ev == "finished":
+                music.crowning()       # ducks the set, rings the fanfare
+                koc_won_at = t
+
         # ---- King of the Charles takes over the whole building ----------
-        if race.running or race_won_at is not None:
+        # Their race drives the building when it is on: same lanes, same
+        # finale, positions straight from the worker rather than simulated
+        # here. One race, not two that disagree.
+        if koc.running or koc_won_at is not None:
+            for i, school in enumerate(SCHOOLS):
+                CREWS[i].pos = koc.progress.get(school, 0.0)
+            if koc.running:
+                rgb = race.render(t)
+            else:
+                age = t - koc_won_at
+                lead = max(range(4), key=lambda i: CREWS[i].pos)
+                rgb = finale(age, CREWS[lead], t)
+                if age > FINALE + 3.0:
+                    koc_won_at = None
+
+        elif race.running or race_won_at is not None:
             for lane, n in enumerate(control.take_strokes()):
                 if n:
                     race.row(lane, n)
@@ -566,13 +601,26 @@ def main():
         rgb = governor.apply(rgb)      # nothing reaches the windows unchecked
 
         # Mirror the tower onto the board's own grid, if one is plugged in.
-        sensor.send_matrix(rgb)
+        #
+        # OFF by default. This writes ~100 bytes to the board ten times a
+        # second, and it is the prime suspect for the board wedging: the sketch
+        # stops responding, stops printing, and will not even accept an upload
+        # until it is physically reset. A minimal sketch that never reads from
+        # the host survives indefinitely; this one does not.
+        #
+        # It is a nice-to-have -- the miniature tower in your palm -- and not
+        # worth a dead board mid-demo. GB_MATRIX=1 turns it back on.
+        if mirror_matrix:
+            sensor.send_matrix(rgb)
 
         ts = tree.stats()
         hw = "arduino" if sensor.available else "no arduino"
-        if race.running:
+        if koc.running or koc_won_at is not None:
             board = "  ".join(f"{c.short} {c.pos*100:3.0f}%" for c in race.standings())
-            staged_line = f"KING OF THE CHARLES   {board}"
+            staged_line = f"{koc.summary().upper()}   {board}"
+        elif race.running:
+            board = "  ".join(f"{c.short} {c.pos*100:3.0f}%" for c in race.standings())
+            staged_line = f"KING OF THE CHARLES (local)   {board}"
         elif race_won_at is not None:
             staged_line = f"{race.winner.name.upper()} WINS"
         else:
@@ -599,6 +647,7 @@ def main():
             # starved for as long as it lasts.
             time.sleep(0.001)
 
+    koc.close()
     music.stop()
     sensor.close()
     weather.close()
