@@ -23,22 +23,25 @@ import {
 import { CROWN, DIGITS, GOLD, MASCOTS, MASCOT_FOR_SCHOOL, blank, blit, drawLaneMascot, mix } from "./sprites.js";
 import { winCelebrationFrame } from "./win-celebration.js";
 
-export const DEFAULT_SCENE_CONFIG = { introSeconds: 22, countdownSeconds: 3 };
+export const DEFAULT_SCENE_CONFIG = { introSeconds: 26.5, countdownSeconds: 3 };
 // Shorter than ~14 s and the beats (especially the four introductions) blur together.
 export const SCENE_CONFIG_LIMITS = { introSeconds: [14, 45], countdownSeconds: [0, 10] };
-export const ANIMATED_STATUSES = ["idle", "intro", "countdown"];
+// "finished" loops the win celebration forever (see win-celebration.js), the same as "idle"
+// loops the reign forever — both only stop when a host calls start()/reset().
+export const ANIMATED_STATUSES = ["idle", "intro", "countdown", "finished"];
 
-// Beat boundaries in ms for a 22 s intro; they stretch or shrink with the configured length.
+// Beat boundaries in ms for a 26.5 s intro; they stretch or shrink with the configured length.
 export const INTRO_BEATS = {
-  holdEnd: 1500, //         0-1.5   the king, crowned, stands still
-  bowEnd: 2500, //        1.5-2.5   bows: closes its eyes and dips one floor
-  riseEnd: 4500, //       2.5-4.5   the crown lifts off, floor by floor, to the top of the tower
-  shineEnd: 5500, //      4.5-5.5   the crown waits at the top
-  meltEnd: 6500, //       5.5-6.5   the crown spreads into the gold finish line
-  waddleEnd: 9500, //     6.5-9.5   the king waddles off the side of the tower, a window at a time
-  introductions: 9500, // 9.5-21.5  each challenger in turn (INTRODUCTION ms each): rises big from the
-  //                                river over its school colour, cheers, blinks, then takes its lane
-  end: 22000,
+  holdEnd: 1500, //          0-1.5   the king, crowned, stands still
+  bowEnd: 2500, //         1.5-2.5   bows: closes its eyes and dips one floor
+  riseEnd: 4500, //        2.5-4.5   the crown lifts off, floor by floor, to the top of the tower
+  shineEnd: 5500, //       4.5-5.5   the crown waits at the top
+  meltEnd: 6500, //        5.5-6.5   the crown spreads into the gold finish line
+  waddleEnd: 14000, //    6.5-14.0   the king waddles off the side of the tower, a window at a
+  //                                 time, its ducklings crossing in single file after it
+  introductions: 14000, // 14.0-26.0 each challenger in turn (INTRODUCTION ms each): rises big from
+  //                                 the river over its school colour, cheers, blinks, takes its lane
+  end: 26500,
 };
 const INTRODUCTION = {
   length: 3000,
@@ -55,6 +58,14 @@ const INTRODUCTION = {
 const KING_TOP = 5; // 9x9 king on rows 5-13, crown on rows 3-4
 const CROWN_REST_TOP = KING_TOP - 2;
 const PEDESTAL_ROW = KING_TOP + 9; // just under a centred 9x9 mascot
+
+// The Duck King leaves with its ducklings behind it, Make Way for Ducklings style. Only the duck
+// gets them: a school mascot that won its way onto the throne abdicates alone, and walks the same
+// beat more slowly because it has less ground to cover.
+const DUCKLINGS = 3;
+const DUCKLING_GAP = 6; // the 5x5 duckling plus a window of daylight, so they cross in single file
+const DUCKLING_TOP = KING_TOP + 4; // their feet on the king's ground line
+const waddleReach = (escorted) => COLS + 1 + (escorted ? DUCKLING_GAP * DUCKLINGS : 0);
 const RIPPLE = [30, 80, 140];
 const DIGIT_COLOR = [150, 150, 150];
 const DIGIT_TOP = 4; // rows 4-8, centred above the challengers
@@ -124,13 +135,25 @@ export function reignFrame(t, { champion = null } = {}) {
 }
 
 /** The king bows, gives up the crown (it becomes the finish line) and waddles off the tower. */
+/** The king's escort: little ducks crossing after it, each bobbing out of step with the last. */
+function drawDucklings(grid, left) {
+  const duck = MASCOTS.duck;
+  for (let i = 0; i < DUCKLINGS; i++) {
+    const bob = (left + i) % 2; // a one-window bob, so they waddle rather than slide
+    blit(grid, duck.sprite5, DUCKLING_TOP - bob, left - DUCKLING_GAP * (i + 1), duck.colors);
+  }
+}
+
 function drawAbdication(grid, t, b, king) {
   if (t < b.waddleEnd) {
+    const escorted = king === MASCOTS.duck;
     const bow = Math.round(ease(progressBetween(t, b.holdEnd, b.bowEnd)));
     // Whole-window steps at a steady pace; faster steps or hops read as flicker at this scale.
-    const left = t >= b.meltEnd ? Math.floor(progressBetween(t, b.meltEnd, b.waddleEnd) * (COLS + 1)) : 0;
-    const pose = t < b.holdEnd || t >= b.meltEnd ? "idle" : "sleep"; // eyes closed while bowing
-    blit(grid, king.poses[pose], KING_TOP + (t >= b.meltEnd ? 0 : bow), left, king.colors);
+    const walking = t >= b.meltEnd;
+    const left = walking ? Math.floor(progressBetween(t, b.meltEnd, b.waddleEnd) * waddleReach(escorted)) : 0;
+    const pose = t < b.holdEnd || walking ? "idle" : "sleep"; // eyes closed while bowing
+    blit(grid, king.poses[pose], KING_TOP + (walking ? 0 : bow), left, king.colors);
+    if (walking && escorted) drawDucklings(grid, left);
   }
 
   const crownTop = Math.round(CROWN_REST_TOP * (1 - ease(progressBetween(t, b.bowEnd, b.riseEnd))));
@@ -200,15 +223,6 @@ export function raceStartFrame() {
   return buildFrame({ progressCols: Object.fromEntries(SCHOOLS.map((s) => [s, 0])), status: "running", winner: null });
 }
 
-/** Whether the building should keep repainting on its own clock right now, vs. holding a
- * static frame: the idle reign forever, intro/countdown for their bounded phase, and
- * "finished" only for the bounded window right after a win. */
-export function isAnimating(state, now) {
-  if (ANIMATED_STATUSES.includes(state.status)) return true;
-  if (state.status === "finished") return Boolean(state.celebrationEndsAt) && now < state.celebrationEndsAt;
-  return false;
-}
-
 /** Whatever the building should show for `state` at `now` (ms since epoch). */
 export function frameFor(state, now) {
   const t = Math.max(0, now - (state.phaseStartedAt ?? now));
@@ -221,9 +235,7 @@ export function frameFor(state, now) {
     case "countdown":
       return countdownFrame(t, config);
     case "finished":
-      return state.celebrationEndsAt && now < state.celebrationEndsAt
-        ? winCelebrationFrame(t, { winner: state.winner, progressCols: state.progressCols })
-        : buildFrame(state);
+      return winCelebrationFrame(t, { winner: state.winner, progressCols: state.progressCols });
     default: // "running"
       return buildFrame(state);
   }

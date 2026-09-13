@@ -9,12 +9,14 @@
 //   mascot  15.0s   the winner's mascot, crowned, on a dim wash of its colour, confetti
 //                   falling from the roof
 //
-// NOT ported: race.py's `mascot -> reign` auto-loop. That prototype restarts a fresh race
-// on a clock; this repo's race only advances when a host presses Start, so `status` must
-// stay "finished" forever after a win. This module's frames play once for WIN_CELEBRATION_MS;
-// race-state.js's `celebrationEndsAt` + scenes.js's `isAnimating`/`frameFor` fall back to
-// render.js's static buildFrame() (today's plain finish line) for as long as "finished"
-// persists afterward.
+// NOT ported as-is: race.py's `mascot -> reign` auto-loop (it restarts a fresh race on a
+// clock; this repo's race only advances when a host presses Start, so there's no clock to
+// loop back to reign on). Instead, `winCelebrationFrame` plays the one-shot reveal (flash,
+// then expand) once, then loops the mascot/confetti phase forever — `status` stays
+// "finished" until the next start()/reset(), and scenes.js's `ANIMATED_STATUSES` keeps this
+// module's frames streaming for exactly as long as that lasts, the same way "idle" loops
+// the reign forever. (WIN_CELEBRATION_MS is still useful as "how long the one-shot reveal
+// plus one mascot-phase cycle takes" for tests, but nothing settles or stops at that point.)
 //
 // PARTICLE SIMPLIFICATION: race.py's sparks/confetti are a per-tick RNG process tied to a
 // stateful Renderer (`self.bits`, appended/aged once per render() call). This file is a pure
@@ -129,11 +131,18 @@ function mascotFrame(t, { winner }) {
   return grid;
 }
 
-/** Whatever the building should show `t` ms after a win (0..WIN_CELEBRATION_MS). */
+/** Whatever the building should show `t` ms after a win. Plays the one-shot reveal (flash,
+ * then expand) once, then loops the crowned-mascot/confetti phase forever — the race only
+ * leaves "finished" when a host presses Start, so there's no natural moment to stop
+ * animating and settle onto a static frame. (An earlier version tried to settle after
+ * WIN_CELEBRATION_MS; since FlashGuard slews color changes gradually and only one frame got
+ * pushed at that point, it froze mid-transition — a muted, half-blended frame that never
+ * finished converging. Looping forever means frames never stop coming, so FlashGuard always
+ * has a live target to converge toward.) */
 export function winCelebrationFrame(t, opts = {}) {
   const clamped = Math.max(0, t);
   if (clamped < FLASH_MS) return flashFrame(clamped, opts);
   let a = clamped - FLASH_MS;
   if (a < EXPAND_MS) return expandFrame(a, opts);
-  return mascotFrame(Math.min(a - EXPAND_MS, MASCOT_MS), opts);
+  return mascotFrame((a - EXPAND_MS) % MASCOT_MS, opts);
 }

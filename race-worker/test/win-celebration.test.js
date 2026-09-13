@@ -44,9 +44,13 @@ test("the celebration draws the winner's crowned mascot during the mascot phase"
 
 test("the win celebration stays inside the same flash budget as the rest of the show", () => {
   const FPS = 15; // matches SCENE_FPS in race-state.js
+  // 2.5 cycles: the celebration now loops forever, so this deliberately crosses the loop
+  // seam (where the mascot phase wraps back to its own t=0) at least once — the blink cycle
+  // (3.333s) doesn't divide evenly into the mascot phase (15s), so the seam is a real content
+  // discontinuity, not just a repeat; confirm the guard smooths it the same as any other cut.
+  const total = Math.round(((WIN_CELEBRATION_MS * 2.5) / 1000) * FPS);
   for (const winner of SCHOOLS) {
     const guard = new FlashGuard();
-    const total = Math.round((WIN_CELEBRATION_MS / 1000) * FPS);
     const frames = [];
     for (let i = 0; i < total; i++) {
       const now = (i * 1000) / FPS;
@@ -54,5 +58,13 @@ test("the win celebration stays inside the same flash budget as the rest of the 
     }
     const rate = worstFlashRate(frames, FPS);
     assert.ok(rate.rate <= GUARD_FLASHES_PER_SECOND, `${winner} flashes ${rate.rate}/s at ${rate.where}`);
+  }
+});
+
+test("the celebration keeps producing valid frames indefinitely (loops, never stops)", () => {
+  for (const winner of SCHOOLS) {
+    for (const t of [WIN_CELEBRATION_MS * 3, WIN_CELEBRATION_MS * 10 + 4321]) {
+      assertValidGrid(winCelebrationFrame(t, { winner, progressCols }));
+    }
   }
 });

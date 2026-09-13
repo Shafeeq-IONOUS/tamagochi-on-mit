@@ -30,11 +30,12 @@ curl -X POST https://sundai.willsarg.com/api/instances \
 ```
 
 This copies a `send_url`/`view_url`/`ws_url` back. Both scripts below default to the
-instance `cobalt-mole` — the same one the [race website](race-worker) uses in
-production (its `SIM_INSTANCE` secret) — so the whole project stays on one simulator
-instance instead of everyone spinning up their own. Pass a different name as the first
-argument if you want to test something without disturbing the shared one; only one
-program should target a given instance at a time, or the display flickers between them.
+instance `cobalt-mole`, a shared sandbox for local testing — **not** the one the
+[race website](race-worker) uses in production (that's a separate, private instance
+in its `SIM_INSTANCE` secret, deliberately not written down here, so ad-hoc testing
+never fights the live show). If you see `cobalt-mole` flickering or showing frames you
+didn't send, someone else is testing on it at the same time — pass your own instance
+name as the first argument instead of fighting over the shared one.
 
 ## Run
 

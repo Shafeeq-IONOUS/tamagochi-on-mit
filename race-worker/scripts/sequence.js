@@ -33,12 +33,9 @@ export function showSequence({ champion = null, fps = 15, reignSeconds = 4, conf
   sample("running", raceSeconds, (t) => ({ progressCols: progressAt(t) }));
   const final = progressAt(raceSeconds * 1000);
   const winner = SCHOOLS[DEMO_SPEEDS.indexOf(Math.max(...DEMO_SPEEDS))];
-  sample("finished", WIN_CELEBRATION_MS / 1000 + 2, () => ({
-    status: "finished",
-    progressCols: final,
-    winner,
-    celebrationEndsAt: WIN_CELEBRATION_MS,
-  }));
+  // finished loops forever now; sample a bit past one full reveal+loop cycle so the demo
+  // (and the flash-safety test that runs this whole sequence) sees the loop seam too
+  sample("finished", WIN_CELEBRATION_MS / 1000 + 2, () => ({ status: "finished", progressCols: final, winner }));
   return frames;
 }
 
