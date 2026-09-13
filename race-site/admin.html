@@ -58,6 +58,16 @@
     </section>
 
     <section>
+      <label for="intro-seconds">Intro — the king gives up the crown (8–30 s)</label>
+      <input id="intro-seconds" type="number" min="8" max="30" step="1">
+      <label for="countdown-seconds">Countdown before cheering opens (0–10 s)</label>
+      <input id="countdown-seconds" type="number" min="0" max="10" step="1">
+      <div class="row">
+        <button id="save-config" class="secondary">Save timing (applies to the next start)</button>
+      </div>
+    </section>
+
+    <section>
       <div class="row">
         <button id="rotate" class="secondary">Mint fresh sim instance</button>
       </div>
@@ -84,11 +94,12 @@
     document.getElementById("log").textContent = msg;
   }
 
-  async function adminPost(path) {
+  async function adminPost(path, body) {
     const key = sessionStorage.getItem("adminKey") ?? keyInput.value;
     const resp = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: { "X-Admin-Key": key },
+      headers: { "X-Admin-Key": key, ...(body ? { "Content-Type": "application/json" } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
     });
     const data = await resp.json().catch(() => ({}));
     if (!resp.ok) log(`Error: ${data.error ?? resp.status}`);
@@ -99,8 +110,17 @@
   document.getElementById("start").addEventListener("click", () => adminPost("/api/admin/start"));
   document.getElementById("stop").addEventListener("click", () => adminPost("/api/admin/stop"));
   document.getElementById("reset").addEventListener("click", () => {
-    if (confirm("Reset the race? This clears all cheers.")) adminPost("/api/admin/reset");
+    if (confirm("Reset the race? This clears all cheers and gives the crown back to the Duck King.")) adminPost("/api/admin/reset");
   });
+  const introInput = document.getElementById("intro-seconds");
+  const countdownInput = document.getElementById("countdown-seconds");
+  document.getElementById("save-config").addEventListener("click", () =>
+    adminPost("/api/admin/config", {
+      introSeconds: Number(introInput.value),
+      countdownSeconds: Number(countdownInput.value),
+    }),
+  );
+
   document.getElementById("rotate").addEventListener("click", async () => {
     const data = await adminPost("/api/admin/rotate-instance");
     if (data.view_url) log(`New instance: ${data.name}\nView: ${data.view_url}`);
@@ -109,7 +129,11 @@
   async function poll() {
     try {
       const resp = await fetch(`${API_BASE}/api/state`);
-      document.getElementById("state").textContent = JSON.stringify(await resp.json(), null, 2);
+      const state = await resp.json();
+      document.getElementById("state").textContent = JSON.stringify(state, null, 2);
+      // show the saved timing, without overwriting a field the host is editing
+      if (state.config && document.activeElement !== introInput) introInput.value = state.config.introSeconds;
+      if (state.config && document.activeElement !== countdownInput) countdownInput.value = state.config.countdownSeconds;
     } catch {
       document.getElementById("state").textContent = "Can't reach the race server.";
     }
