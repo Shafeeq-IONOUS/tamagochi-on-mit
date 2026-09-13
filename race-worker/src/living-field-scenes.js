@@ -1,35 +1,70 @@
-// Curated ports of a handful of behaviours from the `living_field` Python prototype
+// Curated ports of behaviours from the `living_field` Python prototype
 // (branch `living-field`, tamagochi-characters-python/living_field/) onto this repo's
 // plain-JS, 0-255-int, 17x9 pure `(t, opts) -> grid` convention — same shape as scenes.js.
 //
 // PORTED
-//   finale   the winner's fireworks (race.py `finale()`) — an ~11s, four-movement
-//            sequence explicitly called out by living_field's README as "worth
-//            stealing regardless of the rest" and a good fit for a race winner.
-//   aurora   vertical curtains of light (patterns.py `aurora()` + worlds.py's AURORA ramp)
-//   seismic  a wave travelling up through the tower (patterns.py `seismic()` + SEISMIC ramp)
-//   radar    the weather-radar dome on the roof, sweeping (patterns.py `radar()` + RADAR ramp)
+//   finale     the winner's fireworks (race.py `finale()`) — an ~11s, four-movement
+//              sequence explicitly called out by living_field's README as "worth
+//              stealing regardless of the rest" and a good fit for a race winner.
+//   aurora     vertical curtains of light (patterns.py `aurora()` + ramps.py's AURORA ramp)
+//   seismic    a wave travelling up through the tower (patterns.py `seismic()` + SEISMIC ramp)
+//   radar      the weather-radar dome on the roof, sweeping (patterns.py `radar()` + RADAR ramp)
+//   sounding   a vertical atmospheric profile drifting upward (patterns.py `sounding()` +
+//              SOUNDING ramp) — pure function of time, like the three above.
+//   attention  "it has noticed you" (patterns.py `attention()` + ATTENTION ramp) — genuinely
+//              pure when previewed at `_focus`'s real default `(0.92, 0.5)` (row, col — near
+//              the ground, centred) and `ctx.intensity`'s real default `0.6`; no synthetic
+//              ctx needed, just the function's own defaults.
+//   startle    "it flinched" (patterns.py `startle()` + STARTLE ramp) — also uses `_focus`'s
+//              default, but freezing `age` at its own default (`0.0`) forever would just show
+//              the initial flash motionless, a poor preview of a flash-then-recoil-then-watch
+//              effect. So the preview instead synthesizes `age = t` (treating the whole preview
+//              as one startle beginning at t=0) and centres the focus at the facade's middle
+//              `[0.5, 0.5]` (a contact point, rather than `_focus`'s *idle*-gaze default) — this
+//              is a deliberate synthetic ctx choice, not the function's own default behaviour.
+//   memory     "everyone who touched it tonight" (patterns.py `memory()` + MEMORY ramp) — the
+//              empty-touches fallback is just a faint idle pulse, so the preview instead builds
+//              a small fixed `SAMPLE_TOUCHES` array (16 touches spread across a ~3-hour evening,
+//              clustered near the ground since that's the only place people can reach, one small
+//              cluster of 3 close-together touches to show "a few people gathered here") and a
+//              fixed `EVENING_NOW` ("now" pinned at the end of that evening, independent of the
+//              preview's own animation clock) so marks of varying age/size are visible together
+//              for the whole preview while the record still visibly breathes.
+//   dream      "it is replaying the evening" (patterns.py `dream()` + DREAM ramp) — reuses the
+//              same `SAMPLE_TOUCHES`. Unlike memory, `dream()`'s replay position is driven
+//              directly by its own `t` argument (a 22s cycle sweeps `[t0, t1]` of the touches),
+//              so the preview's animation clock *is* the meaningful value here — no extra ctx
+//              needed beyond the synthetic touches. `seconds: 22` covers exactly one full sweep.
+//   forecast   "the building tells you the weather" (patterns.py `forecast()` + FORECAST ramp)
+//              — checked, and the network fetch genuinely lives in `weather.py`/`run.py`, not in
+//              `forecast()` itself: the function is pure given `ctx.forecast` (a roof-first list
+//              of `[rain, cloud]` pairs). So it's portable the same way memory/dream are, using a
+//              fixed synthetic `SAMPLE_FORECAST_ROWS` depicting a front arriving (heavy rain/cloud
+//              16h out fading to clear "now"), which shows the effect the README calls the whole
+//              point of the scene: a bright band arriving at the roof and descending to the street.
 //
-// These four were picked because they are pure functions of a clock (no crowd/touch state
-// to fake), visually distinct in *shape* (not just palette), and cheap per-pixel.
+// These are picked because each is either a pure function of a clock, or made pure for this
+// preview with a small, fixed, deterministic synthetic ctx (documented per-scene above and at
+// each function below) — never a live sensor/network dependency — and each is visually distinct
+// in *shape* (not just palette) and cheap per-pixel.
 //
 // DELIBERATELY NOT PORTED
 //   - race.py's Race/Crew classes: living_field's own README says to throw the rest of
 //     race.py away in favor of this repo's race-state.js/render.js, which already exist
 //     and are better (real state, real mascots, a front end).
-//   - attention / startle / memory / dream (patterns.py): these take a `ctx` of recent
-//     touches and a tracked gaze point — reactive/stateful, not pure (t) -> frame like
-//     everything else here, and this repo has no crowd-position sensor to feed them.
-//   - forecast (patterns.py) / weather.py: needs a live NWS fetch. living_field's README
-//     spends real effort making that fetch never block or fail loudly (background thread,
-//     on-disk cache, silent failure); replicating that machinery is out of scope for a
-//     "preview button" here, and it would be the one scene that depends on network being up.
-//   - tree.py: a whole extra stateful subsystem (branches grafted by a crowd across an
-//     entire evening, persisted); far bigger than the "small, curated handful" this task
-//     asked for.
-//   - sounding, reef: sounding is a vertical banded column much like aurora in spirit
-//     (skipped for variety, not difficulty); reef is a reaction-diffusion simulation that
-//     carries its own state across frames rather than being a pure function of time.
+//   - tree.py: unlike every pattern above, a tree's *shape* is not a formula — it is the
+//     output of a stochastic simulation (`_Tip` objects random-walking and branching, pruned
+//     over time, advanced by a seeded `random.Random`). There is no static expression to
+//     transcribe the way there is for a field function; faithfully porting "what a tree looks
+//     like on the building" means porting the growth simulation itself (including matching
+//     Python's RNG behaviour bit-for-bit to stay deterministic), which is a materially
+//     different and much larger undertaking than every port above, not a small addition. A
+//     hand-authored fake tree shape would not match the Python source's actual algorithm, so
+//     it's left out rather than faked.
+//   - reef: has no function in patterns.py at all (`PATTERNS` never gets a `"reef"` entry from
+//     this file) — it lives entirely in `worlds.py`'s REEF world as a reaction-diffusion
+//     simulation (`reaction.py`) that carries its own state across frames. There is no pure
+//     per-frame formula here to port.
 //
 // SIMPLIFICATION NOTE
 // The Python originals render on a 4x supersampled grid purely for antialiasing, then
@@ -84,6 +119,49 @@ const RADAR_RAMP = [
   [0.64, [206, 220, 62]],
   [0.82, [238, 146, 42]],
   [1.0, [228, 58, 66]],
+];
+const SOUNDING_RAMP = [
+  [0.0, [8, 12, 40]],
+  [0.3, [18, 62, 132]],
+  [0.62, [72, 172, 226]],
+  [0.85, [168, 226, 250]],
+  [1.0, [236, 246, 255]],
+];
+const ATTENTION_RAMP = [
+  [0.0, [10, 8, 26]],
+  [0.28, [86, 40, 30]],
+  [0.58, [214, 124, 40]],
+  [0.82, [252, 200, 116]],
+  [1.0, [255, 246, 226]],
+];
+const STARTLE_RAMP = [
+  [0.0, [4, 6, 18]],
+  [0.3, [18, 58, 132]],
+  [0.6, [86, 170, 250]],
+  [0.85, [196, 232, 255]],
+  [1.0, [255, 255, 255]],
+];
+const MEMORY_RAMP = [
+  [0.0, [8, 6, 30]],
+  [0.24, [54, 22, 92]],
+  [0.48, [152, 48, 118]],
+  [0.7, [238, 118, 82]],
+  [0.88, [252, 196, 120]],
+  [1.0, [255, 244, 214]],
+];
+const DREAM_RAMP = [
+  [0.0, [12, 10, 34]],
+  [0.3, [62, 46, 112]],
+  [0.58, [146, 96, 158]],
+  [0.8, [226, 156, 150]],
+  [1.0, [250, 222, 198]],
+];
+const FORECAST_RAMP = [
+  [0.0, [5, 10, 26]],
+  [0.3, [44, 56, 84]],
+  [0.55, [96, 126, 158]],
+  [0.76, [86, 196, 226]],
+  [1.0, [222, 250, 255]],
 ];
 
 // -- ambient patterns, transcribed from living_field/patterns.py ------------------------
@@ -154,6 +232,250 @@ export function radarFrame(t) {
       let v = (beam + trail) * (0.4 + 0.8 * dist);
       v = v * 1.7 - 0.38;
       grid[r][c] = sampleRamp(RADAR_RAMP, (v + 1) / 2);
+    }
+  }
+  return grid;
+}
+
+/** SOUNDING — the building as a vertical slice of sky: horizontal bands drifting upward. */
+export function soundingFrame(t) {
+  const tS = t / 1000;
+  const grid = blank(ROWS, COLS, [0, 0, 0]);
+  for (let r = 0; r < ROWS; r++) {
+    const y = (r + 0.5) / ROWS;
+    let v = Math.sin(TAU * (y * 3.1 - tS * 0.03));
+    v += 0.5 * Math.sin(TAU * (y * 7.3 + tS * 0.019));
+    v += 0.22 * Math.sin(TAU * (y * 13.0 - tS * 0.045));
+    v *= 0.45 + 0.85 * y; // layers get thinner/fainter with height
+    v /= 1.7;
+    const color = sampleRamp(SOUNDING_RAMP, (v + 1) / 2);
+    for (let c = 0; c < COLS; c++) grid[r][c] = color; // sounding is uniform across columns
+  }
+  return grid;
+}
+
+// -- the four behaviours that need to know about people, transcribed from patterns.py ---
+// Real ctx (a tracked gaze point / recent touches) isn't available to a debug-preview
+// button, so each of these is made pure either by using the function's own real defaults
+// (attention) or a small, fixed, deterministic synthetic ctx (startle/memory/dream) — see
+// the top-of-file PORTED notes for exactly what and why.
+
+/** [timestamp_s, row 0..1, col 0..1, weight] — a fixed, deterministic "evening" of touches,
+ * spread across ~3 hours (0..10800s) and clustered near the ground (rows people can reach),
+ * with one small cluster (rows 8200-8450s) showing a few people gathered in the same spot. */
+const SAMPLE_TOUCHES = [
+  [120, 0.9, 0.18, 1.0],
+  [340, 0.86, 0.62, 0.8],
+  [610, 0.92, 0.4, 1.2],
+  [980, 0.88, 0.85, 0.9],
+  [1500, 0.94, 0.1, 1.0],
+  [2100, 0.8, 0.55, 1.4],
+  [2800, 0.9, 0.3, 0.7],
+  [3600, 0.86, 0.75, 1.1],
+  [4500, 0.92, 0.48, 1.3],
+  [5600, 0.88, 0.2, 0.9],
+  [6800, 0.84, 0.9, 1.0],
+  [8200, 0.9, 0.62, 1.5],
+  [8300, 0.88, 0.58, 1.2],
+  [8450, 0.92, 0.65, 1.0],
+  [9800, 0.86, 0.35, 0.8],
+  [10700, 0.9, 0.5, 1.6],
+];
+/** memory's synthetic "now": the end of the sample evening, independent of the preview's
+ * own animation clock, so the record's marks stay put while the field still breathes. */
+const EVENING_NOW = 10800;
+
+/**
+ * ATTENTION — light gathers towards where the building is looking and the field breathes.
+ * Pure at `_focus`'s real default `(0.92, 0.5)` and `ctx.intensity`'s real default `0.6`.
+ */
+export function attentionFrame(t) {
+  const tS = t / 1000;
+  const [fr0, fc0] = [0.92, 0.5]; // _focus(ctx) default when ctx is falsy
+  const intensity = 0.55 + 0.45 * 0.6; // ctx.get("intensity", 0.6) default
+  const fr = fr0 + 0.055 * Math.sin(TAU * tS * 0.23) + 0.02 * Math.sin(TAU * tS * 0.51);
+  const fc = fc0 + 0.085 * Math.sin(TAU * tS * 0.17 + 1.1) + 0.03 * Math.sin(TAU * tS * 0.43);
+  const breathe = 1.0 + 0.22 * Math.sin(TAU * tS * 0.42);
+  const grid = blank(ROWS, COLS, [0, 0, 0]);
+  for (let r = 0; r < ROWS; r++) {
+    const y = (r + 0.5) / ROWS;
+    for (let c = 0; c < COLS; c++) {
+      const x = (c + 0.5) / COLS;
+      const dr = y - fr;
+      const dc = x - fc;
+      const near = Math.exp(-(dr * dr / (2 * 0.3 ** 2) + dc * dc / (2 * 0.26 ** 2)));
+      const pupil = Math.exp(-(dr * dr / (2 * 0.1 ** 2) + dc * dc / (2 * 0.11 ** 2)));
+      let v = (0.85 * near + 0.75 * pupil) * breathe * intensity;
+      v = v * 1.02 - 0.3;
+      grid[r][c] = sampleRamp(ATTENTION_RAMP, (v + 1) / 2);
+    }
+  }
+  return grid;
+}
+
+/**
+ * STARTLE — a flash at the point of contact, a dark ring recoiling outward, then a held
+ * watchful glow. Preview synthesizes `age = t` (one startle beginning at t=0) with the focus
+ * at the facade's centre, since freezing `age` at its idle default would just show the flash
+ * motionless — see the top-of-file PORTED note.
+ */
+export function startleFrame(t) {
+  const tS = t / 1000;
+  const age = tS;
+  const fr = 0.5 + 0.08 * Math.sin(TAU * 0.31 * tS);
+  const fc = 0.5 + 0.08 * Math.sin(TAU * 0.23 * tS + 1.0);
+  const radius = age * 0.85;
+  const settle = 1.0 - Math.exp(-age / 2.2);
+  const grid = blank(ROWS, COLS, [0, 0, 0]);
+  for (let r = 0; r < ROWS; r++) {
+    const y = (r + 0.5) / ROWS;
+    for (let c = 0; c < COLS; c++) {
+      const x = (c + 0.5) / COLS;
+      const dr = y - fr;
+      const dc = x - fc;
+      const dist = Math.hypot(dr, dc);
+      const hit = Math.exp(-age / 0.22) * Math.exp(-(dist * dist) / (2 * 0.12 ** 2));
+      const ring = Math.exp(-((dist - radius) ** 2) / (2 * (0.06 + 0.05 * age) ** 2)) * Math.exp(-age / 0.9);
+      const pulledBack = -0.55 * Math.exp(-age / 1.3) * clamp01(1.0 - dist / Math.max(radius, 1e-3));
+      const watch = Math.exp(-(dist * dist) / (2.0 * 0.34 ** 2)) * (0.3 + 0.26 * Math.sin(TAU * 1.1 * tS));
+      const alert = 0.16 + 0.9 * watch;
+      let v = (1.35 * hit + 1.05 * ring + pulledBack) * (1.0 - settle) + alert * settle;
+      v = Math.max(-1.2, Math.min(1.2, v)) - 0.1;
+      grid[r][c] = sampleRamp(STARTLE_RAMP, (v + 1) / 2);
+    }
+  }
+  return grid;
+}
+
+/**
+ * MEMORY — every touch leaves a mark, older ones spread wider and dim, newer ones sharp.
+ * Preview uses `SAMPLE_TOUCHES` and a fixed `EVENING_NOW` so the record is visible whole.
+ */
+export function memoryFrame(t) {
+  const tS = t / 1000;
+  const now = EVENING_NOW;
+  const v = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+  for (const [tt, tr, tc, w] of SAMPLE_TOUCHES) {
+    const age = Math.max(0.0, now - tt);
+    const radius = 0.07 + 0.012 * Math.sqrt(age);
+    const strength = w * (0.25 + 0.75 * Math.exp(-age / 420.0));
+    for (let r = 0; r < ROWS; r++) {
+      const y = (r + 0.5) / ROWS;
+      for (let c = 0; c < COLS; c++) {
+        const x = (c + 0.5) / COLS;
+        const dr = y - tr;
+        const dc = x - tc;
+        v[r][c] += strength * Math.exp(-(dr * dr + dc * dc) / (2 * radius * radius));
+      }
+    }
+  }
+  const grid = blank(ROWS, COLS, [0, 0, 0]);
+  for (let r = 0; r < ROWS; r++) {
+    const y = (r + 0.5) / ROWS;
+    for (let c = 0; c < COLS; c++) {
+      const x = (c + 0.5) / COLS;
+      let val = v[r][c];
+      val *= 1.0 + 0.34 * Math.sin(TAU * (0.95 * tS + y * 1.1 + x * 0.6)) + 0.16 * Math.sin(TAU * (0.55 * tS - y * 0.8));
+      val = Math.log1p(10.0 * val) / Math.log1p(10.0 * 22.0);
+      val = Math.max(-1.0, Math.min(1.02, val * 0.86));
+      grid[r][c] = sampleRamp(MEMORY_RAMP, (val + 1) / 2);
+    }
+  }
+  return grid;
+}
+
+/**
+ * DREAM — nobody's near, so the building replays the evening at speed: each touch flares
+ * again in order. Preview reuses `SAMPLE_TOUCHES`; the replay position is driven directly by
+ * `t` itself (a 22s cycle sweeps start to finish), so no extra synthetic ctx is needed here.
+ */
+export function dreamFrame(t) {
+  const tS = t / 1000;
+  const touches = SAMPLE_TOUCHES;
+  const t0 = touches[0][0];
+  const t1 = touches[touches.length - 1][0];
+  const span = Math.max(t1 - t0, 1.0);
+  const cycle = 22.0;
+  const head = ((tS % cycle) / cycle) * span + t0;
+  const v = Array.from({ length: ROWS }, () => new Array(COLS).fill(0));
+  for (const [tt, tr, tc, w] of touches) {
+    const d = head - tt;
+    if (d < -0.4 * span || d > 0.3 * span) continue;
+    const amp = Math.exp(-Math.abs(d) / (0.035 * span)) + 0.3 * Math.exp(-Math.max(d, 0) / (0.16 * span));
+    for (let r = 0; r < ROWS; r++) {
+      const y = (r + 0.5) / ROWS;
+      for (let c = 0; c < COLS; c++) {
+        const x = (c + 0.5) / COLS;
+        const dr = y - tr;
+        const dc = x - tc;
+        v[r][c] += w * amp * Math.exp(-(dr * dr + dc * dc) / (2 * 0.075 ** 2));
+      }
+    }
+  }
+  const pos = (head - t0) / span;
+  const grid = blank(ROWS, COLS, [0, 0, 0]);
+  for (let r = 0; r < ROWS; r++) {
+    const y = (r + 0.5) / ROWS;
+    const band = 0.3 * Math.exp(-((y - pos) ** 2) / (2 * 0.1 ** 2));
+    for (let c = 0; c < COLS; c++) {
+      let val = v[r][c] + band;
+      val = Math.tanh(val * 1.1);
+      val = val * 1.28 - 0.3;
+      grid[r][c] = sampleRamp(DREAM_RAMP, (val + 1) / 2);
+    }
+  }
+  return grid;
+}
+
+/** A fixed 16-hour synthetic forecast, roof-first (index 0 = 16h out, last = "now"): a front
+ * of heavy rain/cloud arriving, clearing by the time it reaches the street. [rain, cloud]. */
+const SAMPLE_FORECAST_ROWS = [
+  [0.85, 0.9],
+  [0.7, 0.9],
+  [0.55, 0.85],
+  [0.4, 0.8],
+  [0.25, 0.7],
+  [0.15, 0.6],
+  [0.08, 0.5],
+  [0.04, 0.4],
+  [0.0, 0.35],
+  [0.0, 0.25],
+  [0.0, 0.15],
+  [0.0, 0.1],
+  [0.0, 0.05],
+  [0.0, 0.0],
+  [0.0, 0.0],
+  [0.0, 0.0],
+];
+
+/**
+ * FORECAST — every row is an hour ahead; the roof is 16h out, the ground is now. A bright
+ * band of rain arriving at the top descends the tower toward the street over the hours.
+ * Genuinely pure given forecast data — the live NWS fetch lives in weather.py/run.py, not in
+ * this function — so the preview supplies `SAMPLE_FORECAST_ROWS` in place of `ctx.forecast`.
+ */
+export function forecastFrame(t) {
+  const tS = t / 1000;
+  const rows = SAMPLE_FORECAST_ROWS;
+  const HIDDEN_ROWS = 2; // rows behind the real tree line, per patterns.py
+  const visible = ROWS - HIDDEN_ROWS;
+  const col = new Array(ROWS).fill(0);
+  for (let i = 0; i < visible; i++) {
+    const src = Math.round((i * (rows.length - 1)) / Math.max(visible - 1, 1));
+    const [rain, cloud] = rows[Math.min(src, rows.length - 1)];
+    col[i] = Math.min(1.0, 0.3 * cloud + 1.05 * rain);
+  }
+  for (let i = visible; i < ROWS; i++) col[i] = col[visible - 1];
+
+  const grid = blank(ROWS, COLS, [0, 0, 0]);
+  for (let r = 0; r < ROWS; r++) {
+    const y = (r + 0.5) / ROWS;
+    const drift = 0.16 * Math.sin(TAU * (0.035 * tS + y * 0.8));
+    for (let c = 0; c < COLS; c++) {
+      const x = (c + 0.5) / COLS;
+      let v = col[r] * (1.0 + drift) + 0.05 * Math.sin(TAU * (0.06 * tS + x * 0.9 + y * 1.4));
+      v = v * 1.75 - 0.55;
+      grid[r][c] = sampleRamp(FORECAST_RAMP, (v + 1) / 2);
     }
   }
   return grid;
@@ -280,4 +602,10 @@ export const LIVING_FIELD_SCENES = {
   aurora: { label: "Aurora", seconds: 8, frame: (t) => auroraFrame(t) },
   seismic: { label: "Seismic", seconds: 17, frame: (t) => seismicFrame(t) },
   radar: { label: "Radar", seconds: 9, frame: (t) => radarFrame(t) },
+  sounding: { label: "Sounding", seconds: 12, frame: (t) => soundingFrame(t) },
+  attention: { label: "Attention", seconds: 8, frame: (t) => attentionFrame(t) },
+  startle: { label: "Startle", seconds: 8, frame: (t) => startleFrame(t) },
+  memory: { label: "Memory", seconds: 10, frame: (t) => memoryFrame(t) },
+  dream: { label: "Dream", seconds: 22, frame: (t) => dreamFrame(t) },
+  forecast: { label: "Forecast", seconds: 12, frame: (t) => forecastFrame(t) },
 };

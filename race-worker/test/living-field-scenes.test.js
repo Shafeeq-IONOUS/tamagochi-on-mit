@@ -3,7 +3,20 @@ import assert from "node:assert/strict";
 
 import { COLS, ROWS } from "../src/render.js";
 import { FlashGuard, GUARD_FLASHES_PER_SECOND, worstFlashRate } from "../src/safety.js";
-import { FINALE_SECONDS, LIVING_FIELD_SCENES, auroraFrame, finaleFrame, radarFrame, seismicFrame } from "../src/living-field-scenes.js";
+import {
+  FINALE_SECONDS,
+  LIVING_FIELD_SCENES,
+  attentionFrame,
+  auroraFrame,
+  dreamFrame,
+  finaleFrame,
+  forecastFrame,
+  memoryFrame,
+  radarFrame,
+  seismicFrame,
+  soundingFrame,
+  startleFrame,
+} from "../src/living-field-scenes.js";
 import { MASCOTS } from "../src/sprites.js";
 import { centeredMascotFrame } from "../src/mascot-preview.js";
 
@@ -23,6 +36,14 @@ test("every living-field frame generator returns a well-formed 17x9 RGB grid", (
     assertValidGrid(auroraFrame(t));
     assertValidGrid(seismicFrame(t));
     assertValidGrid(radarFrame(t));
+    assertValidGrid(soundingFrame(t));
+    assertValidGrid(attentionFrame(t));
+    assertValidGrid(startleFrame(t));
+    assertValidGrid(memoryFrame(t));
+    assertValidGrid(forecastFrame(t));
+  }
+  for (let t = 0; t <= 22_000; t += 400) {
+    assertValidGrid(dreamFrame(t)); // dream's replay cycle is 22s, sample across a full cycle
   }
   for (const color of [
     [210, 160, 20], // duck king gold
@@ -42,7 +63,10 @@ test("finale runs exactly the ~11s the living_field README promises", () => {
 });
 
 test("the living-field scene registry matches its frame generators", () => {
-  assert.deepEqual(Object.keys(LIVING_FIELD_SCENES).sort(), ["aurora", "finale", "radar", "seismic"]);
+  assert.deepEqual(
+    Object.keys(LIVING_FIELD_SCENES).sort(),
+    ["attention", "aurora", "dream", "finale", "forecast", "memory", "radar", "seismic", "sounding", "startle"],
+  );
   for (const [id, scene] of Object.entries(LIVING_FIELD_SCENES)) {
     assert.equal(typeof scene.label, "string");
     assert.ok(scene.seconds > 0, `${id} needs a positive preview duration`);
