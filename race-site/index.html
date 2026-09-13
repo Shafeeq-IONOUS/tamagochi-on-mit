@@ -162,42 +162,39 @@ document.querySelectorAll('.cheer').forEach(button=>{button.disabled=true});
 </script>
 <script>
 /* ---------------------------------------------------------------------------
-   The set, on your phone, roughly in time with everybody else's.
+   The win. On every phone, at the same moment.
 
-   The music itself is controlled from the admin panel: it plays while the race
-   is running and stops when the race does. There is no separate play button,
-   because two sources of truth about whether the music is playing is how you
-   end up with half the room out of step.
+   This plays once, when a school takes the crown, and nothing else. It is not
+   a soundtrack for the race -- that would mean forty handsets a few hundred
+   milliseconds apart grinding against each other for the whole thing, which is
+   a smeared echo rather than music. A single short burst at the finish is the
+   one moment where forty speakers going off together is the point.
 
-   What each person controls is their OWN sound, on or off.
+   KEEPING THEM TOGETHER
 
-   ABOUT KEEPING THEM TOGETHER
+   Everyone starts from the instant the worker declares a winner, not from
+   whenever their phone noticed. Each phone works out how long ago that was --
+   the worker already tells us finishedAt and its own serverTime, so nobody's
+   phone clock matters -- and starts that far in. A phone that hears about the
+   win a second late joins a second in, rather than trailing behind.
 
-   Every phone starting the track from zero whenever it happened to load would
-   be a smeared echo rather than a soundtrack. So each phone works out how far
-   into the race it is -- the server tells us both when the race started and
-   what time it thinks it is -- and seeks to that point. Drift beyond a third
-   of a second is corrected, quietly.
+   If it is more than the length of the clip late, it stays quiet. Arriving at
+   the end of a cheer is worse than missing it.
 
-   It will not be sample-accurate; nothing over the open internet is. It will
-   be close enough to feel like one room rather than forty.
+   STARTING SILENT
 
-   ABOUT STARTING SILENT
-
-   Browsers refuse to play audio until somebody taps something, and that rule
-   exists for good reasons. So sound is OFF until it is asked for, the button
-   says so plainly, and the choice is remembered.
+   Browsers will not play audio until somebody taps something, and that rule is
+   a good one. Sound is off until asked for, the button says so, and the first
+   tap is the permission. The choice is remembered.
 --------------------------------------------------------------------------- */
 (function(){
   const el = document.getElementById('sound-toggle');
   if (!el) return;
   const icon  = document.getElementById('sound-icon');
-  const audio = new Audio('race.m4a');
-  audio.preload = 'auto';
-  audio.loop = true;
+  const audio = new Audio('win.m4a');
+  audio.preload = 'auto';          // 0.4 MB, so it is ready long before it is needed
 
-  let wanted = false;                       // has this person asked for sound
-  let unlocked = false;                     // has a tap freed the audio
+  let wanted = false, unlocked = false, playedFor = null;
   const KEY = 'koc-sound';
   try { wanted = localStorage.getItem(KEY) === 'on'; } catch (e) {}
 
@@ -212,43 +209,41 @@ document.querySelectorAll('.cheer').forEach(button=>{button.disabled=true});
   el.addEventListener('click', () => {
     wanted = !wanted;
     try { localStorage.setItem(KEY, wanted ? 'on' : 'off'); } catch (e) {}
-    unlocked = true;                        // this tap is the permission
+    unlocked = true;
     paint();
-    if (!wanted) audio.pause();
-    apply(window.__kocState);
+    if (!wanted && !audio.paused) audio.pause();
   });
 
-  // How far into the race we should be, in seconds, or null if it has not
-  // started. serverTime and startedAt both come from the worker, so this does
-  // not care whether a phone's own clock is right.
-  function offsetSeconds(s){
-    if (!s || !s.startedAt || !s.serverTime) return null;
-    return Math.max(0, (s.serverTime - s.startedAt) / 1000);
-  }
-
-  function apply(s){
+  function onState(s){
     if (!s) return;
-    const playing = s.status === 'running' || s.status === 'countdown';
-    if (!playing || !wanted || !unlocked){
+
+    // A new race means the last celebration is over and done with.
+    if (s.status !== 'finished'){
+      playedFor = null;
       if (!audio.paused) audio.pause();
       return;
     }
-    const want = offsetSeconds(s);
-    if (want === null) return;
-    const target = audio.duration ? want % audio.duration : want;
-    if (Math.abs(audio.currentTime - target) > 0.35) audio.currentTime = target;
-    if (audio.paused) audio.play().catch(() => {
-      // Refused despite the tap -- some browsers are stricter. Leave the
-      // button showing on, and the next state poll will try again.
-    });
+    if (!wanted || !unlocked) return;
+
+    // Once per winner, however many times we are told about them.
+    const who = s.winner || s.champion || 'winner';
+    if (playedFor === who) return;
+
+    const since = (s.serverTime && s.finishedAt)
+      ? (s.serverTime - s.finishedAt) / 1000 : 0;
+    const len = audio.duration || 26;
+    if (since > len - 1) { playedFor = who; return; }   // too late to be worth it
+
+    playedFor = who;
+    try { audio.currentTime = Math.max(0, since); } catch (e) {}
+    audio.play().catch(() => { playedFor = null; });    // let it try again
   }
 
-  // The page already polls the worker twice a second. Piggyback on that rather
-  // than adding a second timer that can disagree with the first.
+  // Piggyback on the page's existing 500 ms poll rather than adding a second
+  // timer that can disagree with the first.
   const origRender = window.render;
   window.render = function(s){
-    window.__kocState = s;
-    try { apply(s); } catch (e) {}
+    try { onState(s); } catch (e) {}
     return origRender.apply(this, arguments);
   };
 })();
