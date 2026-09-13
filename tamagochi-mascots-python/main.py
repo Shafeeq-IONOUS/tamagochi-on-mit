@@ -1,10 +1,9 @@
 """Tim the Tower Beaver - a crowd-raised Tamagotchi for the 17 x 9 Green Building display.
 
-    python3 main.py                              # local preview at http://localhost:8140/preview
-    python3 main.py --instance <name>            # also drive the simulator instance
+    python3 main.py --instance <name>            # drive the simulator instance
     python3 main.py --instance <name> --bots 20  # fake crowd, for demos and load tests
 
-Students open http://<this machine>:8140/ on their phones (put it behind a QR code).
+Serves a JSON API on :8140 for the website to call (see README).
 """
 
 import argparse
@@ -13,7 +12,6 @@ import random
 import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
 
 from tamagotchi import schools
 from tamagotchi.pet import ACTIONS, Pet
@@ -21,11 +19,10 @@ from tamagotchi.render import Renderer
 from tower.display import MAX_FPS, MemoryDisplay, MultiDisplay, WebDisplay
 from tower.safety import FlashGuard
 
-WEB = Path(__file__).parent / "tamagotchi" / "web"
 COOLDOWN = 0.6  # seconds between actions from one phone, so nobody can solo the pet
 
 
-def make_handler(pet, preview):
+def make_handler(pet, latest):
     last_action = {}
 
     class Handler(BaseHTTPRequestHandler):
@@ -42,14 +39,10 @@ def make_handler(pet, preview):
 
         def do_GET(self):
             path = self.path.split("?")[0]
-            if path == "/":
-                self._send(200, (WEB / "controller.html").read_bytes(), "text/html; charset=utf-8")
-            elif path == "/preview":
-                self._send(200, (WEB / "preview.html").read_bytes(), "text/html; charset=utf-8")
-            elif path == "/api/state":
+            if path == "/api/state":
                 self._send(200, pet.snapshot())
             elif path == "/api/frame":
-                self._send(200, preview.last.to_json().encode())
+                self._send(200, latest.last.to_json().encode())
             elif path == "/api/schools":
                 self._send(200, [[k, v[0]] for k, v in schools.SCHOOLS.items()])
             else:
@@ -109,16 +102,16 @@ def main():
     pet = Pet()
     if args.hatched:
         pet.care, pet.born = 60, time.time() - 10
-    preview = MemoryDisplay()
+    latest = MemoryDisplay()
     web = WebDisplay(args.instance, args.api) if args.instance else None
-    threading.Thread(target=render_loop, args=(pet, FlashGuard(MultiDisplay(preview, web))), daemon=True).start()
+    threading.Thread(target=render_loop, args=(pet, FlashGuard(MultiDisplay(latest, web))), daemon=True).start()
     if args.bots:
         threading.Thread(target=run_bots, args=(pet, args.bots), daemon=True).start()
 
-    print(f"controller: http://localhost:{args.port}/   preview: http://localhost:{args.port}/preview")
+    print(f"API: http://localhost:{args.port}/api/state")
     if web:
         print(f"pushing frames to {web.url}")
-    ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(pet, preview)).serve_forever()
+    ThreadingHTTPServer(("0.0.0.0", args.port), make_handler(pet, latest)).serve_forever()
 
 
 if __name__ == "__main__":

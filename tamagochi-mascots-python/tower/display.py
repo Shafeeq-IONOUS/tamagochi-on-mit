@@ -129,7 +129,7 @@ class WebDisplay:
 
 
 class MemoryDisplay:
-    """Keeps the last frame around so the local preview page can show it."""
+    """Keeps the last frame around for the /api/frame endpoint."""
 
     def __init__(self):
         self.last = Frame()

@@ -9,7 +9,7 @@ python3 mascot_show.py --instance <name>              # mascot lineup on the sim
 python3 mascot_show.py --instance <name> --only husky # one mascot
 python3 mascot_show.py --clips clips/                 # .bin demo clips in the simulator's format
 python3 main.py --instance <name>                     # the interactive pet + phone API
-python3 main.py --bots 20 --hatched                   # fake crowd, local preview at :8140/preview
+python3 main.py --instance <name> --bots 20 --hatched # fake crowd, skip the egg
 python3 -m unittest discover tests                    # flash-safety checks
 ```
 
@@ -68,7 +68,7 @@ leaderboard takes over; 1-7am the pet sleeps and the facade dims.
 | `GET` | `/api/schools` | `[[id, display name], ...]` |
 | `GET` | `/api/frame` | current 17 x 9 x `[r,g,b]` frame (draw a mini tower on the site) |
 
-`tamagotchi/web/controller.html` is a bare reference client. The rate limit is keyed on client IP; if
+The server listens on port 8140. The rate limit is keyed on client IP; if
 the website proxies calls through its backend, forward a per-user id instead.
 
 ## Layout
