@@ -32,3 +32,13 @@ Disclaimer: *This is a personal educational project and is not affiliated with, 
 # tamagochi-on-mit
 # tamagochi-on-mit
 # tamagochi-on-mit
+
+## Living Field
+
+A second renderer, in `living_field/`. Weather worlds, a crowd-grown tree, a
+MeTTa mind that picks between them, and a safety governor. See
+[living_field/README.md](living_field/README.md).
+
+```
+python3 run_living_field.py plucky-eagle
+```

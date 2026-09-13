@@ -1,2 +1,7 @@
 utilities/__pycache__
 __pycache__
+
+# Living Field runtime state (regenerated; not source)
+.weather-cache.json
+.learned.json
+__pycache__/
