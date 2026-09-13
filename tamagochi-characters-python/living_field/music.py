@@ -40,8 +40,13 @@ DUCK_RECOVER = 2.6
 class Music:
     """Plays a folder of files. Volume is live, so the knob works."""
 
-    def __init__(self, folder=None, shuffle=False, enabled=True):
+    def __init__(self, folder=None, shuffle=False, enabled=True, fanfare=True):
         self.enabled = enabled
+        # Whether the laptop rings the winner's fanfare itself. Turn it off
+        # when the phones in the crowd are carrying that moment instead --
+        # two victory sounds at once is a mess, not a celebration. Either
+        # way the DJ set still ducks, so the room goes quiet for the win.
+        self.fanfare_enabled = fanfare
         self.folder = os.path.abspath(folder or MUSIC_DIR)
         self.tracks = []
         self.index = 0
@@ -159,7 +164,7 @@ class Music:
             return False
         self._duck = DUCK_TO
         self._apply()
-        if self._fanfare is not None:
+        if self._fanfare is not None and self.fanfare_enabled:
             try:
                 self._fanfare.play()
                 return True

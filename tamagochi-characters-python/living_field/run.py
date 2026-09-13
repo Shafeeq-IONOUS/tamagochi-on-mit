@@ -271,7 +271,12 @@ def main():
     # network, no ads between tracks, no licensing question for a public
     # square, and the volume knob works live. audio.py still has the Spotify
     # path if you would rather use that for a rehearsal.
-    music = Music(enabled=os.environ.get("GB_AUDIO", "1") != "0")
+    # GB_FANFARE=0 hands the winner's moment to the phones in the crowd: the
+    # laptop still ducks the set so the room falls quiet, but the trumpet comes
+    # out of everybody's pocket instead of the PA. Leave it alone to keep the
+    # fanfare on the PA, which is the safer bet if the phone page is unproven.
+    music = Music(enabled=os.environ.get("GB_AUDIO", "1") != "0",
+                  fanfare=os.environ.get("GB_FANFARE", "1") != "0")
     # Deliberately NOT started here.
     #
     # "One control from the admin side" means the admin's Start button is what
