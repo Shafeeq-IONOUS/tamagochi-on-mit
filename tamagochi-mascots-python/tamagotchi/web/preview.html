@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Tower preview</title>
+<style>
+  body { margin: 0; background: #050608; color: #888; font: 13px system-ui; display: flex; gap: 32px;
+         align-items: center; justify-content: center; min-height: 100vh; }
+  #tower { display: grid; grid-template-columns: repeat(9, 22px); gap: 5px; padding: 14px 18px;
+           background: #1b1c20; border-radius: 4px; }
+  #tower i { width: 22px; height: 26px; border-radius: 2px; background: #000; }
+  iframe { width: 380px; height: 760px; border: 1px solid #222; border-radius: 16px; }
+</style>
+</head>
+<body>
+  <div><div id="tower"></div><p style="text-align:center">17 floors × 9 windows</p></div>
+  <iframe src="/" title="Phone controller"></iframe>
+<script>
+const tower = document.getElementById("tower");
+const cells = Array.from({ length: 17 * 9 }, () => tower.appendChild(document.createElement("i")));
+async function tick() {
+  try {
+    const frame = await (await fetch("/api/frame")).json();
+    frame.flat().forEach(([r, g, b], i) => { cells[i].style.background = `rgb(${r},${g},${b})`; });
+  } catch {}
+  setTimeout(tick, 33);
+}
+tick();
+</script>
+</body>
+</html>
