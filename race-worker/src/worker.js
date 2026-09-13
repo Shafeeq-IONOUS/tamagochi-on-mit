@@ -76,6 +76,24 @@ export default {
         return json(await race.rotateInstance());
       }
 
+      // Debug: push a single mascot's idle sprite, centred, straight to the building —
+      // a quick way for the host to eyeball colours/shape before the event.
+      if (url.pathname === "/api/admin/preview/mascot" && request.method === "POST") {
+        const denied = requireAdmin(request, env);
+        if (denied) return denied;
+        const { id } = await request.json().catch(() => ({}));
+        return json(await race.previewMascot(id));
+      }
+
+      // Debug: push a short sequence of frames for one ported living-field scene
+      // ("finale" | "aurora" | "seismic" | "radar"). See src/living-field-scenes.js.
+      if (url.pathname === "/api/admin/preview/scene" && request.method === "POST") {
+        const denied = requireAdmin(request, env);
+        if (denied) return denied;
+        const { scene } = await request.json().catch(() => ({}));
+        return json(await race.previewScene(scene));
+      }
+
       return json({ error: "not found" }, { status: 404 });
     } catch (err) {
       return json({ error: String(err?.message ?? err) }, { status: 500 });

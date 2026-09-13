@@ -36,6 +36,10 @@
     font-size:12px;color:var(--muted);
   }
   #log{white-space:pre-wrap;font-size:12px;color:var(--muted);margin-top:8px;}
+  .section-title{font-size:15px;margin:0 0 8px;color:var(--paper);}
+  .hint{font-size:12px;color:var(--muted);margin:0 0 12px;}
+  code{background:#0000003a;padding:1px 5px;border-radius:4px;font-size:11px;}
+  button.debug{background:#2a3245;color:var(--paper);flex:0 1 auto;min-width:0;padding:10px 14px;font-size:13px;}
 </style>
 </head>
 <body>
@@ -73,6 +77,16 @@
         <button id="rotate" class="secondary">Mint fresh sim instance</button>
       </div>
       <div id="log"></div>
+    </section>
+
+    <section>
+      <h2 class="section-title">Debug — preview on the building</h2>
+      <p class="hint">Pushes straight to the sim/building through the same flash guard as everything
+        else. Requires the race to be idle (not mid-intro/countdown/race) — Stop or Reset first.</p>
+      <label>Mascots (idle pose, centred)</label>
+      <div class="row" id="mascot-preview-row"></div>
+      <label style="margin-top:12px;">Living-field scenes (ported from the <code>living-field</code> branch)</label>
+      <div class="row" id="scene-preview-row"></div>
     </section>
 
     <section>
@@ -126,6 +140,58 @@
     const data = await adminPost("/api/admin/rotate-instance");
     if (data.view_url) log(`New instance: ${data.name}\nView: ${data.view_url}`);
   });
+
+  // Debug — preview on the building. Mirrors src/sprites.js's MASCOTS keys and
+  // src/living-field-scenes.js's LIVING_FIELD_SCENES keys; kept in sync by hand since the
+  // admin page has no build step to import them from.
+  const MASCOT_PREVIEWS = [
+    { id: "beaver", label: "Tim the Beaver (MIT)" },
+    { id: "pilgrim", label: "John Harvard" },
+    { id: "terrier", label: "Rhett the Terrier (BU)" },
+    { id: "husky", label: "Paws the Husky (NEU)" },
+    { id: "duck", label: "The Duck King" },
+  ];
+  const SCENE_PREVIEWS = [
+    { id: "finale", label: "Finale (fireworks)" },
+    { id: "aurora", label: "Aurora" },
+    { id: "seismic", label: "Seismic" },
+    { id: "radar", label: "Radar" },
+  ];
+
+  function addPreviewButton(row, label, onClick) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "debug";
+    btn.textContent = label;
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        await onClick();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    row.appendChild(btn);
+  }
+
+  const mascotRow = document.getElementById("mascot-preview-row");
+  for (const { id, label } of MASCOT_PREVIEWS) {
+    addPreviewButton(mascotRow, label, async () => {
+      const data = await adminPost("/api/admin/preview/mascot", { id });
+      if (data.ok === false) log(`${label}: ${data.reason}`);
+      else if (data.ok) log(`${label}: pushed to the building.`);
+    });
+  }
+
+  const sceneRow = document.getElementById("scene-preview-row");
+  for (const { id, label } of SCENE_PREVIEWS) {
+    addPreviewButton(sceneRow, label, async () => {
+      log(`${label}: streaming…`);
+      const data = await adminPost("/api/admin/preview/scene", { scene: id });
+      if (data.ok === false) log(`${label}: ${data.reason}`);
+      else if (data.ok) log(`${label}: played (${data.seconds ?? "?"}s).`);
+    });
+  }
 
   async function poll() {
     try {

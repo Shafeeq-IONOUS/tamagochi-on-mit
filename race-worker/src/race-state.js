@@ -1,8 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
-import { SCHOOLS, isSchool } from "./mascots.js";
+import { LANE_COLS } from "./render.js";
+import { SCHOOLS, SCHOOL_INFO, isSchool } from "./mascots.js";
+import { centeredMascotFrame } from "./mascot-preview.js";
 import { packFrame, FINISH_COLUMNS } from "./render.js";
 import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, validateSceneConfig } from "./scenes.js";
 import { FlashGuard } from "./safety.js";
+import { GOLD, MASCOTS } from "./sprites.js";
+import { LIVING_FIELD_SCENES } from "./living-field-scenes.js";
 
 const CHEERS_PER_COLUMN = 12; // crowd-tunable: lower = faster race
 const ALARM_INTERVAL_MS = 400; // how often a running race repaints the building
@@ -15,6 +19,17 @@ const SIM_BASE = "https://sundai.willsarg.com";
 const SCENE_FPS = 15;
 const REIGN_FPS = 8;
 const BATCH_MS = 2800;
+
+// Admin debug previews (mascot cards, living-field scenes) stream at the same rate as the
+// scenes above and go through the same FlashGuard instance and push path as everything
+// else. They require the race to be idle (not intro/countdown/running/finished) rather than
+// being a best-effort overlay on a live race: at 15fps a preview would otherwise fight the
+// alarm loop's own frame pushes for the whole facade for several seconds, which is worse
+// than just refusing — a host previewing mascots/scenes is doing it before the event starts,
+// not mid-race. While a preview streams, the idle reign's own alarm loop is paused (its
+// alarm cleared) and resumed immediately after, so the two don't interleave frames either.
+const PREVIEW_FPS = 15;
+const MASCOT_PREVIEW_SECONDS = 2;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -189,10 +204,10 @@ export class RaceState extends DurableObject {
     return { name: data.name, view_url: data.view_url };
   }
 
-  async pushFrame(now = Date.now()) {
+  /** Push one already-rendered grid through the flash guard and out to the sim. */
+  async pushRawFrame(grid, now = Date.now()) {
     if (!this.state_.instance) return;
-    const state = { ...this.state_, progressCols: this.progressCols() };
-    const body = packFrame(this.guard.filter(frameFor(state, now), now));
+    const body = packFrame(this.guard.filter(grid, now));
     try {
       await fetch(`${SIM_BASE}/api/i/${this.state_.instance}/frame`, {
         method: "POST",
@@ -201,6 +216,62 @@ export class RaceState extends DurableObject {
       });
     } catch {
       // best-effort — a dropped frame just means the display is a beat behind, never fatal
+    }
+  }
+
+  async pushFrame(now = Date.now()) {
+    if (!this.state_.instance) return;
+    const state = { ...this.state_, progressCols: this.progressCols() };
+    await this.pushRawFrame(frameFor(state, now), now);
+  }
+
+  /** Stream `frameAt(t)` (t in ms from 0) for `seconds` at `fps`, each frame through the guard. */
+  async streamPreview(frameAt, seconds, fps = PREVIEW_FPS) {
+    const total = Math.max(1, Math.round(seconds * fps));
+    for (let i = 0; i < total; i++) {
+      const stepStart = Date.now();
+      await this.pushRawFrame(frameAt((i * 1000) / fps), stepStart);
+      const elapsed = Date.now() - stepStart;
+      await sleep(Math.max(0, 1000 / fps - elapsed));
+    }
+  }
+
+  /** Admin-only: push one mascot's idle sprite, centred, straight to the building. */
+  async previewMascot(id) {
+    if (!MASCOTS[id]) throw new Error(`unknown mascot: ${id}`);
+    if (this.state_.status !== "idle") return { ok: false, reason: "race must be idle to preview" };
+    if (!this.state_.instance) return { ok: false, reason: "no sim instance configured" };
+    const grid = centeredMascotFrame(id);
+    await this.withReignPaused(() => this.streamPreview(() => grid, MASCOT_PREVIEW_SECONDS));
+    return { ok: true };
+  }
+
+  /** Admin-only: push a short sequence of frames for one ported living-field scene. */
+  async previewScene(id) {
+    const scene = LIVING_FIELD_SCENES[id];
+    if (!scene) throw new Error(`unknown scene: ${id}`);
+    if (this.state_.status !== "idle") return { ok: false, reason: "race must be idle to preview" };
+    if (!this.state_.instance) return { ok: false, reason: "no sim instance configured" };
+    const opts = id === "finale" ? this.finaleOpts() : {};
+    await this.withReignPaused(() => this.streamPreview((t) => scene.frame(t, opts), scene.seconds));
+    return { ok: true, seconds: scene.seconds };
+  }
+
+  /** The last (or reigning) champion's colour/lane, for the finale preview's rocket. */
+  finaleOpts() {
+    const school = this.state_.champion;
+    if (!school) return { color: GOLD, lane: 0.5 }; // the Duck King: gold, centred
+    return { color: SCHOOL_INFO[school].color, lane: (LANE_COLS[SCHOOLS.indexOf(school)] + 1) / 9 };
+  }
+
+  /** Pause the idle reign's own alarm-driven repaint loop while `fn` streams its own frames
+   * to the building, so the two never interleave; resumes it (if still idle) afterward. */
+  async withReignPaused(fn) {
+    await this.ctx.storage.deleteAlarm();
+    try {
+      await fn();
+    } finally {
+      if (this.state_.status === "idle") await this.ctx.storage.setAlarm(Date.now());
     }
   }
 
