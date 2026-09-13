@@ -57,6 +57,10 @@ export class RaceState extends DurableObject {
     ctx.blockConcurrencyWhile(async () => {
       const stored = await ctx.storage.get("state");
       this.state_ = { ...DEFAULT_STATE(), ...stored };
+      // config is a nested object, so the spread above carries an OLD persisted config
+      // wholesale rather than merging it — a config key added later (like `brightness`)
+      // would silently be missing from any state persisted before that field existed.
+      this.state_.config = { ...DEFAULT_SCENE_CONFIG, ...stored?.config };
       if (!this.state_.instance && env.SIM_INSTANCE) this.state_.instance = env.SIM_INSTANCE;
       // keep the reign / intro / win celebration animating after a restart or deploy
       if (ANIMATED_STATUSES.includes(this.state_.status) && !(await ctx.storage.getAlarm())) {
