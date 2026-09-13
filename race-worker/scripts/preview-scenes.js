@@ -1,6 +1,6 @@
 // Play the pre-race show (reign -> intro -> countdown -> race start) without deploying.
 //
-//   node scripts/preview-scenes.js --instance <name> [--champion mit] [--loop]
+//   node scripts/preview-scenes.js --instance <name> [--champion mit] [--race 20] [--loop]
 //   node scripts/preview-scenes.js --clips <dir>          # .bin clips in the sim's demo format
 //
 // Posting frames to an instance needs only its name, not the event password. Use your own
@@ -22,6 +22,7 @@ const { values: args } = parseArgs({
     champion: { type: "string" },
     clips: { type: "string" },
     loop: { type: "boolean", default: false },
+    race: { type: "string" }, // seconds of demo climb after the countdown
   },
 });
 
@@ -42,7 +43,7 @@ if (args.clips) {
   mkdirSync(args.clips, { recursive: true });
   for (const champion of champions) {
     const path = join(args.clips, `scenes-${champion ?? "duck"}.bin`);
-    writeFileSync(path, clipBytes(guarded(showSequence({ champion, fps: FPS }))));
+    writeFileSync(path, clipBytes(guarded(showSequence({ champion, fps: FPS, raceSeconds: Number(args.race ?? 0) }))));
     console.log(`wrote ${path}`);
   }
 }
@@ -53,7 +54,7 @@ if (args.instance) {
   do {
     for (const champion of champions) {
       console.log(`king: ${champion ?? "the Duck King"}`);
-      for (const grid of guarded(showSequence({ champion, fps: FPS }))) {
+      for (const grid of guarded(showSequence({ champion, fps: FPS, raceSeconds: Number(args.race ?? 0) }))) {
         const started = Date.now();
         const resp = await fetch(url, {
           method: "POST",

@@ -111,10 +111,8 @@ export function scale(color, k) {
   return color.map((v) => Math.max(0, Math.min(255, Math.round(v * k))));
 }
 
-/** Put a school's mini mascot at the head of its lane (`progressCols` 0..8). */
-export function drawLaneMascot(grid, school, laneTop, progressCols, alpha = 1) {
+/** Draw a school's 2x3 mini mascot with its top-left at (top, left); clipped off-grid. */
+export function drawLaneMascot(grid, school, left, top, alpha = 1) {
   const m = MASCOTS[MASCOT_FOR_SCHOOL[school]];
-  if (!m) return;
-  const left = Math.max(0, Math.min(grid[0].length - 2, Math.round(progressCols)));
-  blit(grid, m.mini, laneTop, left, m.colors, alpha);
+  if (m) blit(grid, m.mini, top, left, m.colors, alpha);
 }

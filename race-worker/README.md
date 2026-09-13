@@ -61,8 +61,8 @@ response or shipped to the browser.
 - `src/worker.js` — HTTP router + CORS + admin auth
 - `src/race-state.js` — the `RaceState` Durable Object: cheer counts, start/stop/reset,
   the alarm loop that pushes frames, and `rotateInstance()` to mint a fresh sim instance
-- `src/render.js` — race state -> 17x9 pixel frame (lane bars with each mascot riding the head
-  of its bar)
+- `src/render.js` — race state -> 17x9 pixel frame: four vertical lanes, each mascot climbing
+  from the river toward the finish line with a dim trail in its school colour
 - `src/scenes.js` — the reign, intro and countdown scenes, and `frameFor(state, now)`, which picks
   what the building shows for any status
 - `src/sprites.js` — mascot pixel art (9x9 kings, 2x3 lane minis), crown, countdown digits
@@ -75,9 +75,9 @@ response or shipped to the browser.
 | Status | Default length | On the building |
 | --- | --- | --- |
 | `idle` | until the host presses Start | **Reign:** the King of the Charles idles with a crown on its head, the river along the bottom floor. The Duck King rules until someone wins; after that, the last winner |
-| `intro` | 10 s (3-30) | **Abdication:** the king bows, the crown rises and melts into the gold finish banner, the king sinks into the Charles, the four challengers slide into their lanes |
-| `countdown` | 3 s (0-10) | Soft 3, 2, 1 while the challengers wait at the start |
-| `running` | until a lane fills | The race; cheers are only accepted now |
+| `intro` | 12 s (8-30) | **Abdication:** the king holds still, bows with closed eyes, the crown lifts floor by floor to the top and spreads into the gold finish line, the king sinks into the Charles, and the four challengers climb out of the river one by one (beats in `INTRO_BEATS`, `src/scenes.js`) |
+| `countdown` | 3 s (0-10) | Soft 3, 2, 1 while the challengers wait on the riverbank |
+| `running` | until a lane reaches the top | The climb: lanes MIT, Harvard, gap, BU, NEU; cheers are only accepted now |
 | `finished` | until Start / Stop | Winner announcement; the winner becomes the new king |
 
 The last frame of each scene is exactly the first frame of the next (tested), so hand-offs don't
@@ -116,8 +116,8 @@ npx wrangler dev
 Preview the scenes on your own sim instance (not the shared one) without the Worker:
 
 ```bash
-node scripts/preview-scenes.js --instance <name>            # every king in turn
-node scripts/preview-scenes.js --instance <name> --champion mit --loop
+node scripts/preview-scenes.js --instance <name>                     # every king in turn
+node scripts/preview-scenes.js --instance <name> --champion duck --race 20   # whole show with a demo climb
 npm test
 ```
 
@@ -143,7 +143,7 @@ npx wrangler deploy
 | POST | `/api/admin/start` | `X-Admin-Key` header | resets cheers, starts `intro` -> `countdown` -> `running` |
 | POST | `/api/admin/stop` | `X-Admin-Key` header | back to `idle` (the reign) from any status; the champion keeps the crown |
 | POST | `/api/admin/reset` | `X-Admin-Key` header | full wipe, crown back to the Duck King; timing config is kept |
-| POST | `/api/admin/config` | `X-Admin-Key` header | `{"introSeconds": 3-30, "countdownSeconds": 0-10}`, applies from the next Start; `400` if out of range |
+| POST | `/api/admin/config` | `X-Admin-Key` header | `{"introSeconds": 8-30, "countdownSeconds": 0-10}`, applies from the next Start; `400` if out of range |
 | POST | `/api/admin/rotate-instance` | `X-Admin-Key` header | mints a new sim instance with `SIM_PASSWORD`, adopts it |
 
 ## Tuning

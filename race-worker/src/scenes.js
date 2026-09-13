@@ -1,26 +1,39 @@
 // The story around the race, as pure (time, state) -> 17x9 frame functions.
 //
 //   idle       reign      the King of the Charles (the Duck King until someone wins) idles, crowned
-//   intro      abdicate   the king bows, the crown rises and melts into the finish banner,
-//                         the king sinks into the Charles, the four challengers take their lanes
-//   countdown  3, 2, 1    soft digits while the challengers wait at the start
-//   running / finished    the race itself (render.js)
+//   intro      abdicate   see INTRO_BEATS below
+//   countdown  3, 2, 1    soft digits while the challengers wait on the riverbank
+//   running / finished    the climb itself (render.js)
 //
-// The last countdown frame equals the race's first frame, so the hand-off has no jump.
+// The last frame of each scene is the first frame of the next, so hand-offs don't jump.
 import { SCHOOLS } from "./mascots.js";
-import { BANNER_DIM, COLS, LANE_STARTS, OFF, ROWS, buildFrame } from "./render.js";
-import { CROWN, DIGITS, GOLD, MASCOTS, MASCOT_FOR_SCHOOL, blank, blit, mix } from "./sprites.js";
+import { BANNER, COLS, LANE_COLS, OFF, RIVER_ROW, ROWS, START_TOP, buildFrame, drawRiverRow } from "./render.js";
+import { CROWN, DIGITS, GOLD, MASCOTS, MASCOT_FOR_SCHOOL, blank, blit, drawLaneMascot, mix } from "./sprites.js";
 
-export const DEFAULT_SCENE_CONFIG = { introSeconds: 10, countdownSeconds: 3 };
-export const SCENE_CONFIG_LIMITS = { introSeconds: [3, 30], countdownSeconds: [0, 10] };
+export const DEFAULT_SCENE_CONFIG = { introSeconds: 12, countdownSeconds: 3 };
+// Below ~8 s the intro beats blur together on a building this size.
+export const SCENE_CONFIG_LIMITS = { introSeconds: [8, 30], countdownSeconds: [0, 10] };
 export const ANIMATED_STATUSES = ["idle", "intro", "countdown"];
 
+// Beat boundaries in ms for a 12 s intro; they stretch or shrink with the configured length.
+export const INTRO_BEATS = {
+  holdEnd: 1500, //       0-1.5  the king, crowned, stands still
+  bowEnd: 2500, //      1.5-2.5  bows: closes its eyes and dips one floor
+  riseEnd: 4500, //     2.5-4.5  the crown lifts off, floor by floor, to the top of the tower
+  shineEnd: 5500, //    4.5-5.5  the crown waits at the top
+  meltEnd: 6500, //     5.5-6.5  the crown spreads into the gold finish line
+  sinkEnd: 8500, //     6.5-8.5  the king sinks into the Charles
+  riseChallengers: 9000, // 9.0-11.5 the four challengers climb out of the river, one by one
+  end: 12000,
+};
+
 const KING_TOP = 5; // 9x9 king on rows 5-13, crown on rows 3-4
-const RIVER_ROW = ROWS - 1;
-const RIVER = [0, 35, 80];
+const CROWN_REST_TOP = KING_TOP - 2;
 const RIPPLE = [30, 80, 140];
 const DIGIT_COLOR = [150, 150, 150];
-const INTRO_REFERENCE_MS = 10_000; // beat times below are for a 10 s intro and scale with it
+const DIGIT_TOP = 4; // rows 4-8, centred above the challengers
+const CHALLENGER_STAGGER = 500;
+const CHALLENGER_RISE = 1000;
 
 const ease = (x) => 0.5 - 0.5 * Math.cos(Math.PI * Math.max(0, Math.min(1, x)));
 const progressBetween = (t, start, end) => Math.max(0, Math.min(1, (t - start) / (end - start)));
@@ -40,83 +53,74 @@ export function validateSceneConfig(input = {}, base = DEFAULT_SCENE_CONFIG) {
 
 const kingMascot = (champion) => MASCOTS[MASCOT_FOR_SCHOOL[champion] ?? "duck"];
 
-function drawRiver(grid, t, alpha = 1) {
-  const ripple = Math.floor(t / 700) % COLS;
-  for (let c = 0; c < COLS; c++) {
-    grid[RIVER_ROW][c] = mix(OFF, c === ripple ? RIPPLE : RIVER, alpha);
-  }
+function drawRiver(grid, t, { ripple = true } = {}) {
+  drawRiverRow(grid);
+  if (ripple) grid[RIVER_ROW][Math.floor(t / 700) % COLS] = RIPPLE;
 }
 
 function drawCrown(grid, top, alpha = 1) {
   blit(grid, CROWN.sprite, top, (COLS - 5) / 2, CROWN.colors, alpha);
 }
 
-/** Idle king with crown; `t` drives the breathing bob and the blink. */
-function drawKing(grid, mascot, t, { top = KING_TOP, alpha = 1, crown = true } = {}) {
-  const bob = t % 2000 < 1000 ? 0 : 1;
-  const pose = t % 4000 > 3850 ? "blink" : "idle";
-  blit(grid, mascot.poses[pose], top - bob, 0, mascot.colors, alpha);
-  if (crown) drawCrown(grid, top - bob - 2, alpha);
-}
-
-function drawChallengers(grid, t = Infinity, enterAt = 0, stagger = 400, duration = 1200) {
-  SCHOOLS.forEach((school, i) => {
-    const k = ease(progressBetween(t, enterAt + i * stagger, enterAt + i * stagger + duration));
-    if (k <= 0) return;
-    // slide in from just off the left edge (drawLaneMascot clamps to the grid, so blit directly)
-    const m = MASCOTS[MASCOT_FOR_SCHOOL[school]];
-    blit(grid, m.mini, LANE_STARTS[i], Math.round(-2 + 2 * k), m.colors, k);
-  });
-}
-
-function drawBanner(grid, color = BANNER_DIM) {
+function drawBanner(grid, color = BANNER) {
   for (let c = 0; c < COLS; c++) grid[0][c] = color;
+}
+
+/** Challengers on the riverbank; `rise` 0..1 per school (0 = still under the water). */
+function drawChallengers(grid, rise = () => 1) {
+  SCHOOLS.forEach((school, i) => {
+    const k = ease(rise(i));
+    if (k <= 0) return;
+    drawLaneMascot(grid, school, LANE_COLS[i], Math.round(RIVER_ROW + 1 - k * (RIVER_ROW + 1 - START_TOP)));
+  });
 }
 
 export function reignFrame(t, { champion = null } = {}) {
   const grid = blank(ROWS, COLS, OFF);
-  drawKing(grid, kingMascot(champion), t);
+  const king = kingMascot(champion);
+  const bob = t % 2000 < 1000 ? 0 : 1; // slow breathing
+  const pose = t % 4000 > 3850 ? "blink" : "idle";
+  blit(grid, king.poses[pose], KING_TOP - bob, 0, king.colors);
+  drawCrown(grid, CROWN_REST_TOP - bob);
   drawRiver(grid, t);
   return grid;
 }
 
 export function introFrame(t, { champion = null, introSeconds = DEFAULT_SCENE_CONFIG.introSeconds } = {}) {
-  const s = (introSeconds * 1000) / INTRO_REFERENCE_MS;
-  const at = (ms) => ms * s;
+  const at = (ms) => (ms * introSeconds * 1000) / INTRO_BEATS.end;
+  const b = Object.fromEntries(Object.entries(INTRO_BEATS).map(([k, ms]) => [k, at(ms)]));
   const grid = blank(ROWS, COLS, OFF);
   const king = kingMascot(champion);
 
-  // 1.5-3.5 s: bow one floor while the crown rises to the roof
-  const bow = Math.round(ease(progressBetween(t, at(1500), at(2500))));
-  // 5-6.5 s: sink into the Charles
-  const sink = ease(progressBetween(t, at(5000), at(6500)));
-  const kingTop = KING_TOP + bow + Math.round(sink * (ROWS - KING_TOP));
-  if (sink < 1) drawKing(grid, king, t, { top: kingTop, alpha: 1 - sink, crown: false });
+  // the king: still, then a bow with closed eyes, then sinking below the river row
+  const bow = Math.round(ease(progressBetween(t, b.holdEnd, b.bowEnd)));
+  const sink = ease(progressBetween(t, b.meltEnd, b.sinkEnd));
+  const kingTop = KING_TOP + bow + Math.round(sink * (ROWS - KING_TOP - bow));
+  if (kingTop < RIVER_ROW) blit(grid, king.poses[t < b.holdEnd ? "idle" : "sleep"], kingTop, 0, king.colors);
 
-  // crown: sits on the head, rises to rows 0-1, then melts into the finish banner
-  const rise = ease(progressBetween(t, at(1500), at(3500)));
-  const melt = ease(progressBetween(t, at(3500), at(5000)));
-  if (melt < 1) {
-    const headTop = KING_TOP - (t % 2000 < 1000 ? 0 : 1) - 2;
-    drawCrown(grid, Math.round(headTop * (1 - rise)), 1 - melt);
-  }
+  // the crown: lifts off to rows 0-1, waits, then spreads along row 0 into the finish line
+  const crownTop = Math.round(CROWN_REST_TOP * (1 - ease(progressBetween(t, b.bowEnd, b.riseEnd))));
+  const melt = ease(progressBetween(t, b.shineEnd, b.meltEnd));
+  if (melt < 1) drawCrown(grid, crownTop, 1 - melt);
   if (melt > 0) {
-    const half = Math.round(2 + 2.5 * melt); // spreads from the crown's width to the full row
-    const color = mix(GOLD, BANNER_DIM, melt);
+    const reach = 2 + 2.5 * melt; // from the crown's width to the whole row
     for (let c = 0; c < COLS; c++) {
-      if (Math.abs(c - (COLS - 1) / 2) <= half) grid[0][c] = mix(grid[0][c], color, Math.min(1, melt * 2));
+      if (Math.abs(c - (COLS - 1) / 2) <= reach) grid[0][c] = mix(GOLD, BANNER, melt);
     }
   }
 
-  // 6.5-10 s: challengers take their lanes; the river fades so the race starts on a clean facade
-  drawChallengers(grid, t, at(6500), at(400), at(1200));
-  drawRiver(grid, t, 1 - progressBetween(t, at(8500), at(10000)));
+  // the river rolls over the sinking king; it stills once the challengers start climbing out
+  drawRiver(grid, t, { ripple: t < b.riseChallengers });
+  drawChallengers(grid, (i) =>
+    progressBetween(t, b.riseChallengers + at(i * CHALLENGER_STAGGER), b.riseChallengers + at(i * CHALLENGER_STAGGER + CHALLENGER_RISE)),
+  );
   return grid;
 }
 
 export function countdownFrame(t, { countdownSeconds = DEFAULT_SCENE_CONFIG.countdownSeconds } = {}) {
   const grid = blank(ROWS, COLS, OFF);
   drawBanner(grid);
+  drawRiver(grid, t, { ripple: false });
   drawChallengers(grid);
 
   const remaining = countdownSeconds * 1000 - t;
@@ -124,7 +128,7 @@ export function countdownFrame(t, { countdownSeconds = DEFAULT_SCENE_CONFIG.coun
   if (DIGITS[digit]) {
     const u = 1000 - (remaining - (digit - 1) * 1000); // 0..1000 within this digit's second
     const alpha = Math.max(0, Math.min(1, u / 250, (1000 - u) / 250));
-    blit(grid, DIGITS[digit], 6, 4, { "#": DIGIT_COLOR }, alpha);
+    blit(grid, DIGITS[digit], DIGIT_TOP, (COLS - 3) / 2, { "#": DIGIT_COLOR }, alpha);
   }
   return grid;
 }
