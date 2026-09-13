@@ -165,7 +165,12 @@
     const king = SCHOOLS.find((s) => s.id === state.champion);
     const kingName = king ? `${king.mascot}` : "The Duck King";
     if (state.status === "idle") bannerEl.textContent = `👑 ${kingName} rules the Charles. Waiting for the race…`;
-    else if (state.status === "intro") bannerEl.textContent = `👑 ${kingName} is giving up the crown…`;
+    else if (state.status === "intro") {
+      const challenger = SCHOOLS.find((s) => s.id === state.introducing);
+      bannerEl.textContent = challenger
+        ? `Introducing ${challenger.mascot} for ${challenger.name}!`
+        : `👑 ${kingName} is giving up the crown…`;
+    }
     else if (state.status === "countdown") bannerEl.textContent = `Get ready… ${secondsLeft}`;
     else if (state.status === "running") bannerEl.textContent = "Race is on — cheer!";
     else if (state.status === "finished") {

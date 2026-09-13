@@ -7,6 +7,7 @@ import {
   countdownFrame,
   frameFor,
   introFrame,
+  introducingAt,
   raceStartFrame,
   reignFrame,
   validateSceneConfig,
@@ -38,7 +39,7 @@ test("every scene frame is 17x9 RGB", () => {
 
 test("scene hand-offs don't jump", () => {
   const same = (a, b) => assert.deepEqual(a, b);
-  same(introFrame(12_000), countdownFrame(0)); // intro end = countdown before its first digit fades in
+  same(introFrame(22_000), countdownFrame(0)); // intro end = countdown before its first digit fades in
   same(countdownFrame(3000), raceStartFrame()); // countdown end = the race's first frame
   same(introFrame(20_000, { introSeconds: 20 }), raceStartFrame());
 });
@@ -76,9 +77,24 @@ test("mascots start on the riverbank and climb to the finish line", () => {
   assert.equal(frame[8][4], OFF); // the gap column between Harvard and BU stays dark
 });
 
+test("every challenger is introduced, in lane order, before the countdown", () => {
+  const seen = [];
+  for (let t = 0; t <= 22_000; t += 100) {
+    const school = introducingAt(t);
+    if (school && seen.at(-1) !== school) seen.push(school);
+  }
+  assert.deepEqual(seen, ["mit", "harvard", "bu", "neu"]);
+  assert.equal(introducingAt(5000), null); // still the king's abdication
+  assert.equal(introducingAt(21_800), null); // everyone is on the riverbank
+  // mid-introduction the mascot is shown big over a strip of its school colour
+  const midMit = introFrame(9500 + 1500);
+  assert.notDeepEqual(midMit[14][4], OFF);
+  assert.ok(midMit.slice(5, 14).flat().filter((px) => px !== OFF).length > 30);
+});
+
 test("config validation", () => {
-  assert.deepEqual(validateSceneConfig({ introSeconds: "12" }), { introSeconds: 12, countdownSeconds: 3 });
-  assert.throws(() => validateSceneConfig({ introSeconds: 7 }), RangeError); // too short to read
+  assert.deepEqual(validateSceneConfig({ introSeconds: "30" }), { introSeconds: 30, countdownSeconds: 3 });
+  assert.throws(() => validateSceneConfig({ introSeconds: 13 }), RangeError); // too short to read
   assert.throws(() => validateSceneConfig({ countdownSeconds: 11 }), RangeError);
   assert.throws(() => validateSceneConfig({ countdownSeconds: "soon" }), RangeError);
 });

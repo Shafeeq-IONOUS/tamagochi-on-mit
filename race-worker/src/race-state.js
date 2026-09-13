@@ -1,7 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { SCHOOLS, isSchool } from "./mascots.js";
 import { packFrame, FINISH_COLUMNS } from "./render.js";
-import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, validateSceneConfig } from "./scenes.js";
+import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, introducingAt, validateSceneConfig } from "./scenes.js";
 import { FlashGuard } from "./safety.js";
 
 const CHEERS_PER_COLUMN = 12; // crowd-tunable: lower = faster race
@@ -73,6 +73,9 @@ export class RaceState extends DurableObject {
       phaseEndsAt: this.state_.phaseEndsAt,
       serverTime: Date.now(),
       champion: this.state_.champion,
+      // school being introduced right now during the intro, so the site can name it
+      introducing:
+        this.state_.status === "intro" ? introducingAt(Date.now() - this.state_.phaseStartedAt, this.state_.config) : null,
       config: this.state_.config,
       hasInstance: Boolean(this.state_.instance),
     };
