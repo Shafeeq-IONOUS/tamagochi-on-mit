@@ -22,10 +22,14 @@ import {
 } from "./render.js";
 import { CROWN, DIGITS, GOLD, MASCOTS, MASCOT_FOR_SCHOOL, blank, blit, drawLaneMascot, mix } from "./sprites.js";
 import { winCelebrationFrame } from "./win-celebration.js";
+import { DEFAULT_MAX_BRIGHTNESS } from "./safety.js";
 
-export const DEFAULT_SCENE_CONFIG = { introSeconds: 26.5, countdownSeconds: 3 };
+export const DEFAULT_SCENE_CONFIG = { introSeconds: 26.5, countdownSeconds: 3, brightness: DEFAULT_MAX_BRIGHTNESS };
 // Shorter than ~14 s and the beats (especially the four introductions) blur together.
-export const SCENE_CONFIG_LIMITS = { introSeconds: [14, 45], countdownSeconds: [0, 10] };
+// brightness: fraction of full channel value every pushed frame is capped to (see
+// safety.js's capBrightness) — 0.4 is dim-but-legible from across the Charles, 1 is no cap.
+export const SCENE_CONFIG_LIMITS = { introSeconds: [14, 45], countdownSeconds: [0, 10], brightness: [0.4, 1] };
+const SCENE_CONFIG_UNITS = { introSeconds: "seconds", countdownSeconds: "seconds", brightness: "(a 0..1 fraction)" };
 // "finished" loops the win celebration forever (see win-celebration.js), the same as "idle"
 // loops the reign forever — both only stop when a host calls start()/reset().
 export const ANIMATED_STATUSES = ["idle", "intro", "countdown", "finished"];
@@ -79,7 +83,7 @@ export function validateSceneConfig(input = {}, base = DEFAULT_SCENE_CONFIG) {
     if (input[key] === undefined) continue;
     const value = Number(input[key]);
     if (!Number.isFinite(value) || value < min || value > max) {
-      throw new RangeError(`${key} must be between ${min} and ${max} seconds`);
+      throw new RangeError(`${key} must be between ${min} and ${max} ${SCENE_CONFIG_UNITS[key] ?? ""}`.trim());
     }
     out[key] = value;
   }

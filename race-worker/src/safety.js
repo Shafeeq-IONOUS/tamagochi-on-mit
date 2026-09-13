@@ -15,6 +15,21 @@ const DARK_BELOW = 0.8;
 const RAMP_SECONDS = 0.3; // a 0 -> 255 fade takes at least this long at the reference fps
 const REFERENCE_FPS = 30;
 
+export const DEFAULT_MAX_BRIGHTNESS = 0.85;
+
+/** Scale every channel of every pixel by `fraction` (0..1), so nothing can ever hit 255 —
+ * some scenes composite colours additively (win-celebration.js's sparks/confetti, e.g.) and
+ * can overflow a channel to full white where two bright things overlap; a fixed ceiling
+ * applied here, after all scene math and unconditionally, catches that regardless of how
+ * any given scene computes its pixels. Same idea as living_field's governor.py: "brightness
+ * capped, applied last, so nothing downstream can undo it." Doubles as a plain dimmer — a
+ * lower fraction just makes the whole facade dimmer, not only flatter peaks. */
+export function capBrightness(grid, fraction = DEFAULT_MAX_BRIGHTNESS) {
+  const f = Math.max(0, Math.min(1, fraction));
+  if (f >= 1) return grid;
+  return grid.map((row) => row.map((px) => px.map((v) => Math.round(v * f))));
+}
+
 const LINEAR = Array.from({ length: 256 }, (_, v) => {
   const s = v / 255;
   return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;

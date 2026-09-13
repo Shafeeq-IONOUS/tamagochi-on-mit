@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { COLS, LANE_COLS, OFF, ROWS, buildFrame, climbTop } from "../src/render.js";
-import { FlashGuard, GUARD_FLASHES_PER_SECOND, MAX_FLASHES_PER_SECOND, worstFlashRate } from "../src/safety.js";
+import { DEFAULT_MAX_BRIGHTNESS, FlashGuard, GUARD_FLASHES_PER_SECOND, MAX_FLASHES_PER_SECOND, capBrightness, worstFlashRate } from "../src/safety.js";
 import {
   ANIMATED_STATUSES,
   DEFAULT_SCENE_CONFIG,
@@ -128,10 +128,13 @@ test("only the Duck King is escorted", () => {
 });
 
 test("config validation", () => {
-  assert.deepEqual(validateSceneConfig({ introSeconds: "30" }), { introSeconds: 30, countdownSeconds: 3 });
+  assert.deepEqual(validateSceneConfig({ introSeconds: "30" }), { ...DEFAULT_SCENE_CONFIG, introSeconds: 30 });
   assert.throws(() => validateSceneConfig({ introSeconds: 13 }), RangeError); // too short to read
   assert.throws(() => validateSceneConfig({ countdownSeconds: 11 }), RangeError);
   assert.throws(() => validateSceneConfig({ countdownSeconds: "soon" }), RangeError);
+  assert.deepEqual(validateSceneConfig({ brightness: "0.6" }), { ...DEFAULT_SCENE_CONFIG, brightness: 0.6 });
+  assert.throws(() => validateSceneConfig({ brightness: 0.1 }), RangeError); // below the floor
+  assert.throws(() => validateSceneConfig({ brightness: 1.5 }), RangeError);
 });
 
 test("the guard stops a 10 Hz strobe", () => {
@@ -168,4 +171,16 @@ test("the whole show, including a full climb, is flash-safe", () => {
     const rate = worstFlashRate(shown, FPS);
     assert.ok(rate.rate <= GUARD_FLASHES_PER_SECOND, `guarded scenes flash ${rate.rate}/s at ${rate.where}`);
   }
+});
+
+test("capBrightness never lets a channel through above the cap, and 1.0 is a no-op", () => {
+  const bright = [[[255, 255, 255], [255, 0, 0]], [[0, 255, 0], [128, 128, 128]]];
+  const capped = capBrightness(bright, 0.5);
+  for (const row of capped) for (const px of row) for (const v of px) assert.ok(v <= 128, `channel ${v} exceeds 50% cap`);
+  assert.deepEqual(capBrightness(bright, 1), bright);
+});
+
+test("the default max brightness is a real cap, not a pass-through", () => {
+  assert.ok(DEFAULT_MAX_BRIGHTNESS < 1);
+  assert.equal(DEFAULT_SCENE_CONFIG.brightness, DEFAULT_MAX_BRIGHTNESS);
 });

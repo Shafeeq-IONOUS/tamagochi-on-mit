@@ -73,6 +73,15 @@
     </section>
 
     <section>
+      <label for="brightness">Max brightness — caps every window, everywhere, immediately (40%–100%)</label>
+      <input id="brightness" type="range" min="40" max="100" step="5">
+      <div class="row">
+        <span id="brightness-value" style="flex:none;color:var(--muted);font-size:13px;padding:12px 0;"></span>
+        <button id="save-brightness" class="secondary">Apply now</button>
+      </div>
+    </section>
+
+    <section>
       <div class="row">
         <button id="rotate" class="secondary">Mint fresh sim instance</button>
       </div>
@@ -136,6 +145,15 @@
       introSeconds: Number(introInput.value),
       countdownSeconds: Number(countdownInput.value),
     }),
+  );
+
+  const brightnessInput = document.getElementById("brightness");
+  const brightnessValue = document.getElementById("brightness-value");
+  brightnessInput.addEventListener("input", () => {
+    brightnessValue.textContent = `${brightnessInput.value}%`;
+  });
+  document.getElementById("save-brightness").addEventListener("click", () =>
+    adminPost("/api/admin/config", { brightness: Number(brightnessInput.value) / 100 }),
   );
 
   document.getElementById("rotate").addEventListener("click", async () => {
@@ -218,6 +236,11 @@
       // show the saved timing, without overwriting a field the host is editing
       if (state.config && document.activeElement !== introInput) introInput.value = state.config.introSeconds;
       if (state.config && document.activeElement !== countdownInput) countdownInput.value = state.config.countdownSeconds;
+      if (state.config?.brightness && document.activeElement !== brightnessInput) {
+        const pct = Math.round(state.config.brightness * 100);
+        brightnessInput.value = pct;
+        brightnessValue.textContent = `${pct}%`;
+      }
     } catch {
       document.getElementById("state").textContent = "Can't reach the race server.";
     }

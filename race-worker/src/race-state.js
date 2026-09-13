@@ -4,7 +4,7 @@ import { SCHOOLS, SCHOOL_INFO, isSchool } from "./mascots.js";
 import { centeredMascotFrame } from "./mascot-preview.js";
 import { packFrame, FINISH_COLUMNS } from "./render.js";
 import { ANIMATED_STATUSES, DEFAULT_SCENE_CONFIG, frameFor, introducingAt, validateSceneConfig } from "./scenes.js";
-import { FlashGuard } from "./safety.js";
+import { FlashGuard, capBrightness } from "./safety.js";
 import { GOLD, MASCOTS } from "./sprites.js";
 import { LIVING_FIELD_SCENES } from "./living-field-scenes.js";
 
@@ -212,7 +212,12 @@ export class RaceState extends DurableObject {
   /** Push one already-rendered grid through the flash guard and out to the sim. */
   async pushRawFrame(grid, now = Date.now()) {
     if (!this.state_.instance) return;
-    const body = packFrame(this.guard.filter(grid, now));
+    // Brightness cap is applied to the TARGET before the flash guard sees it, so the guard's
+    // slew-toward-target logic can never converge past the cap — the one choke point every
+    // frame (race, reign, intro/countdown, every debug preview, the win celebration) passes
+    // through, so this one line covers all of them.
+    const capped = capBrightness(grid, this.state_.config?.brightness);
+    const body = packFrame(this.guard.filter(capped, now));
     try {
       await fetch(`${SIM_BASE}/api/i/${this.state_.instance}/frame`, {
         method: "POST",
