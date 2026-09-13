@@ -272,8 +272,14 @@ def main():
     # square, and the volume knob works live. audio.py still has the Spotify
     # path if you would rather use that for a rehearsal.
     music = Music(enabled=os.environ.get("GB_AUDIO", "1") != "0")
-    if music.ready and music.tracks:
-        music.start()
+    # Deliberately NOT started here.
+    #
+    # "One control from the admin side" means the admin's Start button is what
+    # starts the music. Beginning it at launch made that button a no-op -- the
+    # set was already playing before anybody pressed anything, and there was no
+    # way to tell from the room whether the control worked.
+    #
+    # P still starts it by hand if you want music while setting up.
     crowned = False
     mirror_matrix = os.environ.get("GB_MATRIX", "0") == "1"
 
