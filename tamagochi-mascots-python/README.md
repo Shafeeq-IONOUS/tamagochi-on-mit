@@ -36,11 +36,12 @@ from it (`E` = eye, `M` = mouth). The baby stage is the top rows of the drawing.
 | Mascot | School |
 | --- | --- |
 | Tim the Beaver | MIT |
+| John Harvard (pilgrim) | Harvard |
 | Paws the Husky | Northeastern |
 | Rhett the Terrier | BU |
 | Jumbo the Elephant | Tufts |
 | Baldwin the Eagle | Boston College |
-| Make Way Duckling | everyone else |
+| Make Way Duckling | every school without its own mascot |
 
 The showcase routine (12 s each, on black): ride down the floors → idle + blink → eat → one hop →
 doze off → wake → ride back up. In the interactive game the pet wears the mascot of whichever school

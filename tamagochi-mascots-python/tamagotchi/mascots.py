@@ -78,6 +78,23 @@ MASCOTS = {
             {"B": (185, 105, 35), "L": (235, 170, 100), "K": (110, 55, 15)},
         ),
         Mascot(
+            "pilgrim", "John Harvard", "HARVARD", "harvard",
+            [
+                "..HHHHH..",
+                "..HHYHH..",
+                "HHHHHHHHH",
+                ".GLLLLLG.",
+                ".GELLLEG.",
+                ".GLLMLLG.",
+                "..CCCCC..",
+                ".KKKKKKK.",
+                ".KK...KK.",
+            ],
+            {"H": (90, 90, 140), "G": (150, 150, 165), "L": (230, 170, 130),
+             "C": (200, 200, 190), "K": (190, 30, 55)},
+            eye=(80, 40, 20), lid="L", head_rows=6,
+        ),
+        Mascot(
             "husky", "Paws the Husky", "NEU", "neu",
             [
                 "B.......B",
@@ -161,8 +178,9 @@ MASCOTS = {
 }
 
 BY_SCHOOL = {m.school: m for m in MASCOTS.values()}
-DEFAULT = MASCOTS["beaver"]
+DEFAULT = MASCOTS["beaver"]      # before anyone has interacted - it's MIT's building
+CATCH_ALL = MASCOTS["duckling"]  # schools without their own mascot
 
 
 def for_school(school_id):
-    return BY_SCHOOL.get(school_id, DEFAULT)
+    return BY_SCHOOL.get(school_id, CATCH_ALL)
