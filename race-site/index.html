@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Green Building Race</title>
+<style>
+  :root{
+    --night: #0a0d16;
+    --slate: #161c2b;
+    --brass: #c9a668;
+    --paper: #eef1f6;
+    --muted: #8a93ab;
+    --mit: #a31f34;
+    --harvard: #7800c8;
+    --bu: #cc0000;
+    --neu: #f0f0f0;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--night);
+    color:var(--paper);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    padding:24px 16px 48px;
+  }
+  .wrap{max-width:640px;margin:0 auto;}
+  h1{
+    font-size:clamp(1.6rem,6vw,2.2rem);
+    margin:0 0 4px;
+    text-align:center;
+  }
+  .sub{
+    text-align:center;
+    color:var(--muted);
+    font-size:14px;
+    margin:0 0 24px;
+  }
+  #status-banner{
+    text-align:center;
+    padding:10px 16px;
+    border-radius:8px;
+    background:var(--slate);
+    border:1px solid #ffffff22;
+    margin-bottom:20px;
+    font-weight:600;
+    font-size:15px;
+  }
+  #status-banner.finished{background:#2a2210;border-color:var(--brass);color:var(--brass);}
+  .lanes{display:flex;flex-direction:column;gap:14px;}
+  .lane{
+    background:var(--slate);
+    border-radius:12px;
+    padding:14px 16px;
+    border:1px solid #ffffff14;
+  }
+  .lane-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+  }
+  .lane-head .school{font-weight:700;font-size:16px;}
+  .lane-head .mascot{color:var(--muted);font-size:13px;}
+  .track{
+    position:relative;
+    height:14px;
+    border-radius:7px;
+    background:#00000055;
+    overflow:hidden;
+    margin-bottom:12px;
+  }
+  .fill{
+    position:absolute;inset:0 auto 0 0;
+    width:0%;
+    border-radius:7px;
+    transition:width .25s ease-out;
+  }
+  button.cheer{
+    width:100%;
+    padding:16px;
+    border:none;
+    border-radius:10px;
+    font-size:17px;
+    font-weight:700;
+    color:#0a0d16;
+    cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+    transition:transform .08s ease-out, filter .15s;
+  }
+  button.cheer:active{transform:scale(.96);filter:brightness(1.15);}
+  button.cheer:disabled{opacity:.4;cursor:default;}
+  footer{
+    text-align:center;
+    color:var(--muted);
+    font-size:12px;
+    margin-top:32px;
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🏁 Race up the Green Building</h1>
+    <p class="sub">Cheer for your school &mdash; every cheer pushes your mascot up a floor.</p>
+    <div id="status-banner">Waiting for the race to start&hellip;</div>
+    <div class="lanes" id="lanes"></div>
+    <footer>Watch it live on the building, or at <a href="https://sundai.willsarg.com" style="color:var(--brass)">the simulator</a>.</footer>
+  </div>
+
+<script src="config.js"></script>
+<script>
+  const SCHOOLS = [
+    { id: "mit", name: "MIT", mascot: "Tim the Beaver", color: "var(--mit)" },
+    { id: "harvard", name: "Harvard", mascot: "John Harvard", color: "var(--harvard)" },
+    { id: "bu", name: "BU", mascot: "Rhett the Terrier", color: "var(--bu)" },
+    { id: "neu", name: "Northeastern", mascot: "Paws the Husky", color: "var(--neu)" },
+  ];
+  const FINISH_COLS = 8;
+
+  const lanesEl = document.getElementById("lanes");
+  const bannerEl = document.getElementById("status-banner");
+
+  SCHOOLS.forEach((s) => {
+    const lane = document.createElement("div");
+    lane.className = "lane";
+    lane.innerHTML = `
+      <div class="lane-head">
+        <span class="school">${s.name}</span>
+        <span class="mascot">${s.mascot}</span>
+      </div>
+      <div class="track"><div class="fill" id="fill-${s.id}" style="background:${s.color}"></div></div>
+      <button class="cheer" id="btn-${s.id}" style="background:${s.color}">Cheer for ${s.name}</button>
+    `;
+    lanesEl.appendChild(lane);
+    document.getElementById(`btn-${s.id}`).addEventListener("click", () => cheer(s.id));
+  });
+
+  async function cheer(school) {
+    try {
+      await fetch(`${API_BASE}/api/cheer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ school }),
+      });
+    } catch {
+      // network hiccup — next poll will resync the UI either way
+    }
+  }
+
+  function render(state) {
+    const running = state.status === "running";
+    SCHOOLS.forEach((s) => {
+      const pct = Math.min(100, (state.progressCols[s.id] / FINISH_COLS) * 100);
+      document.getElementById(`fill-${s.id}`).style.width = `${pct}%`;
+      document.getElementById(`btn-${s.id}`).disabled = !running;
+    });
+
+    bannerEl.classList.toggle("finished", state.status === "finished");
+    if (state.status === "idle") bannerEl.textContent = "Waiting for the race to start…";
+    else if (state.status === "running") bannerEl.textContent = "Race is on — cheer!";
+    else if (state.status === "finished") {
+      const winner = SCHOOLS.find((s) => s.id === state.winner);
+      bannerEl.textContent = `🏆 ${winner ? winner.name : state.winner} wins!`;
+    }
+  }
+
+  async function poll() {
+    try {
+      const resp = await fetch(`${API_BASE}/api/state`);
+      render(await resp.json());
+    } catch {
+      bannerEl.textContent = "Can't reach the race server… retrying";
+    }
+  }
+
+  poll();
+  setInterval(poll, 500);
+</script>
+</body>
+</html>

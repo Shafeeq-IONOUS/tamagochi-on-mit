@@ -52,3 +52,19 @@ python3 tamagochi-characters-python/run_web.py [instance-name]
 
 Then watch either one live at `https://sundai.willsarg.com/<instance-name>`
 (add `?view=street` or `?view=river` for the other camera angles).
+
+## The event: a mascot race
+
+Since the display window is short (~20 min), the live show is a race: 4 school mascots
+(MIT's beaver, Harvard's John Harvard, BU's terrier, Northeastern's husky) climb the
+building as the crowd cheers for them from their phones. That's a separate app:
+
+- [`race-worker/`](race-worker) — Cloudflare Worker + Durable Object: holds the race
+  state, exposes the cheer/admin API, and is the only thing that talks to the sim (the
+  event password stays server-side). See its README for setup/deploy.
+- [`race-site/`](race-site) — the Cloudflare Pages frontend: a public cheer page and an
+  admin page to start/stop/reset the race.
+
+Someone else owns the mascot art/animation ("cheering models", `mascots` branch) and the
+frame transitions; `race-worker/src/render.js` draws simple solid lane bars for now and is
+meant to be swapped out once those land.
