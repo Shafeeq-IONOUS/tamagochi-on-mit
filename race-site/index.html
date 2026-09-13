@@ -310,9 +310,11 @@
     const running = state.status === "running";
     SCHOOLS.forEach((id) => {
       const progress = Math.max(0, Math.min(FINISH_COLS, state.progressCols[id] ?? 0));
-      const filled = Math.floor(progress);
-      const frac = progress - filled;
       const cells = document.querySelectorAll(`#track-${id} .cell`);
+      // at the win threshold (progress === FINISH_COLS) there's no fraction left over, so
+      // treat it as "all blocks", not floor(progress) blocks plus a bare sliver
+      const filled = progress >= FINISH_COLS ? cells.length : Math.floor(progress);
+      const frac = progress - filled;
       cells.forEach((cell, i) => {
         if (i < filled) { cell.style.background = MASCOTS[id].color; cell.style.opacity = 1; }
         else if (i === filled && frac > 0.1) { cell.style.background = MASCOTS[id].color; cell.style.opacity = 0.35 + frac * 0.65; }

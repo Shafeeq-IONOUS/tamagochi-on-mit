@@ -52,6 +52,7 @@ export class RaceState extends DurableObject {
     this.env = env;
     this.lastCheerAt = new Map();
     this.guard = new FlashGuard();
+    this.previewing = false; // true while a debug preview streams; alarm() yields to it
     this.state_ = null;
     ctx.blockConcurrencyWhile(async () => {
       const stored = await ctx.storage.get("state");
@@ -265,12 +266,20 @@ export class RaceState extends DurableObject {
   }
 
   /** Pause the idle reign's own alarm-driven repaint loop while `fn` streams its own frames
-   * to the building, so the two never interleave; resumes it (if still idle) afterward. */
+   * to the building, so the two never interleave; resumes it (if still idle) afterward.
+   *
+   * `deleteAlarm()` alone only cancels a FUTURE alarm — it doesn't stop an `alarm()`
+   * invocation that's already mid-batch (it sleeps between frames, and DO RPCs can run
+   * concurrently with that sleep), so a preview starting mid-batch used to race against the
+   * still-running reign loop and both would push frames at once. `this.previewing` is
+   * checked at the top of every iteration of alarm()'s loop so it yields immediately. */
   async withReignPaused(fn) {
+    this.previewing = true;
     await this.ctx.storage.deleteAlarm();
     try {
       await fn();
     } finally {
+      this.previewing = false;
       if (this.state_.status === "idle") await this.ctx.storage.setAlarm(Date.now());
     }
   }
@@ -278,7 +287,7 @@ export class RaceState extends DurableObject {
   async alarm() {
     if (!this.state_.instance) return;
     const batchStart = Date.now();
-    while (ANIMATED_STATUSES.includes(this.state_.status) && Date.now() - batchStart < BATCH_MS) {
+    while (!this.previewing && ANIMATED_STATUSES.includes(this.state_.status) && Date.now() - batchStart < BATCH_MS) {
       const now = Date.now();
       await this.advance(now);
       if (!ANIMATED_STATUSES.includes(this.state_.status)) break;
@@ -287,7 +296,9 @@ export class RaceState extends DurableObject {
       await sleep(Math.max(0, 1000 / fps - (Date.now() - now)));
     }
 
-    if (ANIMATED_STATUSES.includes(this.state_.status)) {
+    if (this.previewing) {
+      return; // a preview took over; it re-arms the alarm itself when it's done
+    } else if (ANIMATED_STATUSES.includes(this.state_.status)) {
       await this.ctx.storage.setAlarm(Date.now());
     } else if (this.state_.status === "running") {
       await this.pushFrame();
